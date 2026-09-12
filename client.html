@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelRoyale - Multiplayer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 40px rgba(0, 200, 255, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas { display: block; background: #1a1a2e; }
+        #ui {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 12px; left: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .hud-box {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        #health-bar-container, #shield-bar-container {
+            width: 170px; height: 14px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.2);
+            overflow: hidden;
+            margin-bottom: 2px;
+        }
+        #health-bar {
+            height: 100%; width: 100%;
+            background: linear-gradient(90deg, #e74c3c, #f39c12);
+            transition: width 0.15s;
+        }
+        #shield-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #3498db, #00c6ff);
+            transition: width 0.15s;
+        }
+        #player-list {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            min-width: 140px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        #player-list h3 {
+            font-size: 12px;
+            color: #00c6ff;
+            margin-bottom: 6px;
+        }
+        .plist-item { padding: 2px 0; }
+        .plist-item.me { color: #2ecc71; font-weight: 600; }
+        .plist-item.dead { color: #888; text-decoration: line-through; }
+        #chat-box {
+            position: absolute;
+            bottom: 60px; left: 12px;
+            width: 260px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        .chat-msg {
+            background: rgba(0,0,0,0.55);
+            padding: 3px 8px;
+            margin-bottom: 2px;
+            border-radius: 4px;
+        }
+        #chat-input-container {
+            position: absolute;
+            bottom: 12px; left: 12px;
+            display: none;
+            pointer-events: all;
+        }
+        #chat-input {
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #00c6ff;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            width: 260px;
+            font-size: 13px;
+            outline: none;
+        }
+        #status {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            padding: 20px 40px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 20;
+            pointer-events: all;
+        }
+        #status button {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            border: none;
+            color: white;
+            padding: 12px 28px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 12px;
+            font-weight: 600;
+        }
+        #status input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #555;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            width: 200px;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        #emote-bar {
+            position: absolute;
+            bottom: 12px; right: 12px;
+            display: flex;
+            gap: 6px;
+        }
+        .emote-btn {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            width: 38px; height: 38px;
+            border-radius: 8px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            cursor: pointer;
+        }
+        .emote-btn:hover { background: rgba(0,150,255,0.4); }
+        #connection-status {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #888;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 10px;
+            border-radius: 10px;
+        }
+        #connection-status.connected { color: #2ecc71; }
+        #connection-status.disconnected { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game" width="900" height="600"></canvas>
+        <div id="ui">
+            <div id="hud">
+                <div class="hud-box">
+                    <div style="font-size:10px;color:#aaa;margin-bottom:1px;">VIDA</div>
+                    <div id="health-bar-container"><div id="health-bar"></div></div>
+                    <div style="font-size:10px;color:#5dade2;margin-bottom:1px;">ESCUDO</div>
+                    <div id="shield-bar-container"><div id="shield-bar"></div></div>
+                </div>
+                <div class="hud-box" id="materials">🪵 Materiales: 30</div>
+                <div class="hud-box" id="kills">💀 Eliminaciones: 0</div>
+            </div>
+
+            <div id="player-list">
+                <h3>Jugadores</h3>
+                <div id="plist-content"></div>
+            </div>
+
+            <div id="chat-box"></div>
+            <div id="chat-input-container">
+                <input id="chat-input" type="text" placeholder="Escribe un mensaje..." maxlength="100">
+            </div>
+
+            <div id="emote-bar">
+                <div class="emote-btn" onclick="doEmote('dance')">💃</div>
+                <div class="emote-btn" onclick="doEmote('wave')">👋</div>
+                <div class="emote-btn" onclick="doEmote('cheer')">🎉</div>
+                <div class="emote-btn" onclick="doEmote('sit')">🪑</div>
+            </div>
+
+            <div id="connection-status" class="disconnected">Desconectado</div>
+        </div>
+
+        <div id="status">
+            <h2 style="margin-bottom:8px;">PixelRoyale MP</h2>
+            <p style="color:#aaa;font-size:13px;margin-bottom:10px;">Multijugador con WebSockets</p>
+            <input id="name-input" type="text" placeholder="Tu nombre" maxlength="16" value="">
+            <br>
+            <button onclick="connect()">Conectar</button>
+            <p style="color:#666;font-size:11px;margin-top:12px;">
+                Abre esta misma página en varias pestañas<br>o en otros dispositivos de la misma red
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const WORLD = 2000;
+
+        let ws = null;
+        let myId = null;
+        let gameRunning = false;
+        let players = new Map(); // otros jugadores
+        let me = null;
+        let bullets = [];
+        let particles = [];
+        let keys = {};
+        let mouse = { x: W/2, y: H/2, down: false };
+        let camX = 0, camY = 0;
+        let lastShot = 0;
+        let lastUpdate = 0;
+        let myKills = 0;
+
+        function rand(a, b) { return Math.random() * (b - a) + a; }
+        function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+        function connect() {
+            const name = document.getElementById('name-input').value.trim() || 'Jugador';
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = location.host || 'localhost:3000';
+            ws = new WebSocket(`${protocol}//${host}`);
+
+            ws.onopen = () => {
+                document.getElementById('connection-status').textContent = 'Conectado';
+                document.getElementById('connection-status').className = 'connected';
+                document.getElementById('status').style.display = 'none';
+                ws.send(JSON.stringify({ type: 'setName', name }));
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connection-status').textContent = 'Desconectado';
+                document.getElementById('connection-status').className = 'disconnected';
+                gameRunning = false;
+                document.getElementById('status').style.display = 'block';
+                document.getElementById('status').innerHTML = `
+                    <h2>Desconectado</h2>
+                    <p style="color:#aaa;margin:10px 0">Se perdió la conexión con el servidor</p>
+                    <button onclick="location.reload()">Reintentar</button>
+                `;
+            };
+
+            ws.onerror = () => {
+                alert('No se pudo conectar al servidor.\nAsegúrate de que el servidor esté corriendo (node server.js)');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+        }
+
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'welcome':
+                    myId = data.id;
+                    me = {
+                        id: myId,
+                        x: 0, y: 0,
+                        angle: 0,
+                        health: 100,
+                        shield: 0,
+                        materials: 30,
+                        color: '#00c6ff',
+                        name: 'Yo',
+                        emote: null,
+                        alive: true,
+                        facing: 1,
+                        walkCycle: 0
+                    };
+                    // Cargar jugadores existentes
+                    players.clear();
+                    for (const p of data.players) {
+                        if (p.id === myId) {
+                            me.x = p.x;
+                            me.y = p.y;
+                            me.color = p.color;
+                            me.health = p.health;
+                            me.shield = p.shield;
+                        } else {
+                            players.set(p.id, {
+                                ...p,
+                                facing: 1,
+                                walkCycle: 0
+                            });
+                        }
+                    }
+                    gameRunning = true;
+                    updateHUD();
+                    updatePlayerList();
+                    requestAnimationFrame(loop);
+                    break;
+
+                case 'playerJoined':
+                    if (data.player.id !== myId) {
+                        players.set(data.player.id, {
+                            ...data.player,
+                            facing: 1,
+                            walkCycle: 0
+                        });
+                        addChat('Sistema', `${data.player.name} entró a la partida`);
+                        updatePlayerList();
+                    }
+                    break;
+
+                case 'playerLeft':
+                    players.delete(data.id);
+                    addChat('Sistema', `Jugador #${data.id} salió`);
+                    updatePlayerList();
+                    break;
+
+                case 'playerUpdate':
+                    if (data.id !== myId && players.has(data.id)) {
+                        const p = players.get(data.id);
+                        p.x = data.x;
+                        p.y = data.y;
+                        p.angle = data.angle;
+                        p.emote = data.emote;
+                        p.health = data.health;
+                        p.shield = data.shield;
+                        p.walkCycle += 0.2;
+                    }
+                    break;
+
+                case 'shoot':
+                    if (data.id !== myId) {
+                        bullets.push({
+                            x: data.x,
+                            y: data.y,
+                            vx: Math.cos(data.angle) * 11,
+                            vy: Math.sin(data.angle) * 11,
+                            radius: 4,
+                            damage: 20,
+                            fromId: data.id,
+                            life: 70
+                        });
+                    }
+                    break;
+
+                case 'playerDamaged':
+                    if (data.id === myId) {
+                        me.health = data.health;
+                        me.shield = data.shield;
+                        createParticles(me.x, me.y, '#e74c3c', 6);
+                        updateHUD();
+                    } else if (players.has(data.id)) {
+                        const p = players.get(data.id);
+                        p.health = data.health;
+                        p.shield = data.shield;
+                    }
+                    break;
+
+                case 'playerDied':
+                    if (data.id === myId) {
+                        me.alive = false;
+                        me.health = 0;
+                        updateHUD();
+                        setTimeout(() => {
+                            alert('¡Has sido eliminado!');
+                        }, 100);
+                    } else if (players.has(data.id)) {
+                        const p = players.get(data.id);
+                        p.alive = false;
+                        p.health = 0;
+                        createParticles(p.x, p.y, p.color, 16);
+                        if (data.killerId === myId) {
+                            myKills++;
+                            updateHUD();
+                        }
+                    }
+                    updatePlayerList();
+                    break;
+
+                case 'nameChange':
+                    if (players.has(data.id)) {
+                        players.get(data.id).name = data.name;
+                        updatePlayerList();
+                    }
+                    break;
+
+                case 'chat':
+                    addChat(data.name, data.message);
+                    break;
+            }
+        }
+
+        function send(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            }
+        }
+
+        function updateHUD() {
+            if (!me) return;
+            document.getElementById('health-bar').style.width = Math.max(0, me.health / 100 * 100) + '%';
+            document.getElementById('shield-bar').style.width = Math.max(0, me.shield / 100 * 100) + '%';
+            document.getElementById('materials').textContent = `🪵 Materiales: ${me.materials}`;
+            document.getElementById('kills').textContent = `💀 Eliminaciones: ${myKills}`;
+        }
+
+        function updatePlayerList() {
+            const el = document.getElementById('plist-content');
+            let html = `<div class="plist-item me">${me?.name || 'Yo'} (tú)</div>`;
+            for (const [, p] of players) {
+                html += `<div class="plist-item ${p.alive ? '' : 'dead'}">${p.name}</div>`;
+            }
+            el.innerHTML = html;
+        }
+
+        function addChat(name, msg) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML = `<b style="color:#00c6ff">${name}:</b> ${msg}`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+            if (box.children.length > 8) box.removeChild(box.firstChild);
+        }
+
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: rand(-3, 3),
+                    vy: rand(-3, 3),
+                    life: rand(15, 35),
+                    maxLife: 35,
+                    color,
+                    size: rand(2, 4)
+                });
+            }
+        }
+
+        function doEmote(type) {
+            if (!me || !me.alive) return;
+            me.emote = type;
+            setTimeout(() => { if (me.emote === type) me.emote = null; }, type === 'sit' ? 99999 : 2000);
+        }
+
+        function drawPerson(x, y, angle, color, walkCycle, emote, name, isMe) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            let armL = -0.4, armR = 0.4, legL = 0, legR = 0, bob = 0, sit = 0;
+
+            if (emote === 'dance') {
+                const t = Date.now() / 120;
+                armL = Math.sin(t) * 1.1; armR = -Math.sin(t) * 1.1;
+                legL = Math.sin(t) * 0.4; legR = -legL;
+                bob = Math.sin(t * 2) * 2.5;
+            } else if (emote === 'wave') {
+                armR = -1.7 + Math.sin(Date.now() / 100) * 0.4;
+            } else if (emote === 'cheer') {
+                armL = armR = -2.1;
+                bob = Math.abs(Math.sin(Date.now() / 140)) * 3;
+            } else if (emote === 'sit') {
+                sit = 7; legL = legR = 1.3;
+            } else {
+                const w = Math.sin(walkCycle) * 0.55;
+                legL = w; legR = -w; armL = -w * 0.6; armR = w * 0.6;
+            }
+
+            ctx.translate(0, bob);
+
+            // Sombra
+            ctx.beginPath();
+            ctx.ellipse(0, 13, 9, 3.5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fill();
+
+            // Piernas
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-3.5, 2 + sit);
+            ctx.lineTo(-3.5 + Math.sin(legL) * 10, 2 + sit + Math.cos(legL) * 10);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(3.5, 2 + sit);
+            ctx.lineTo(3.5 + Math.sin(legR) * 10, 2 + sit + Math.cos(legR) * 10);
+            ctx.stroke();
+
+            // Cuerpo
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.roundRect(-7, -14 + sit, 14, 15, 3);
+            ctx.fill();
+
+            // Brazos
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-6, -8 + sit);
+            ctx.lineTo(-6 + Math.sin(armL) * 9, -8 + sit + Math.cos(armL) * 9);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(6, -8 + sit);
+            ctx.lineTo(6 + Math.sin(armR) * 9, -8 + sit + Math.cos(armR) * 9);
+            ctx.stroke();
+
+            // Cabeza
+            ctx.beginPath();
+            ctx.arc(0, -18 + sit, 6.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#f5d0a9';
+            ctx.fill();
+
+            // Ojos
+            ctx.fillStyle = '#222';
+            ctx.beginPath();
+            ctx.arc(-2.2, -19 + sit, 1.3, 0, Math.PI * 2);
+            ctx.arc(2.2, -19 + sit, 1.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Arma
+            if (!emote || emote === 'sit') {
+                ctx.save();
+                ctx.translate(0, -5 + sit);
+                ctx.rotate(angle);
+                ctx.fillStyle = '#444';
+                ctx.fillRect(7, -1.5, 14, 3);
+                ctx.restore();
+            }
+
+            // Nombre
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = isMe ? '#2ecc71' : '#fff';
+            ctx.fillText(name || '', 0, -30 + sit);
+
+            ctx.restore();
+        }
+
+        function loop() {
+            if (!gameRunning || !me) return;
+
+            // Movimiento local
+            if (me.alive) {
+                const dx = (keys['d'] || keys['D'] ? 1 : 0) - (keys['a'] || keys['A'] ? 1 : 0);
+                const dy = (keys['s'] || keys['S'] ? 1 : 0) - (keys['w'] || keys['W'] ? 1 : 0);
+                if (dx || dy) {
+                    const len = Math.hypot(dx, dy) || 1;
+                    me.x += (dx / len) * 3.4;
+                    me.y += (dy / len) * 3.4;
+                    me.walkCycle += 0.25;
+                    if (me.emote === 'sit') me.emote = null;
+                }
+                me.x = Math.max(20, Math.min(WORLD - 20, me.x));
+                me.y = Math.max(20, Math.min(WORLD - 20, me.y));
+
+                const wx = mouse.x + camX;
+                const wy = mouse.y + camY;
+                me.angle = Math.atan2(wy - me.y, wx - me.x);
+
+                // Disparar
+                if (mouse.down && Date.now() - lastShot > 200 && !me.emote) {
+                    lastShot = Date.now();
+                    const bx = me.x + Math.cos(me.angle) * 20;
+                    const by = me.y + Math.sin(me.angle) * 20;
+                    bullets.push({
+                        x: bx, y: by,
+                        vx: Math.cos(me.angle) * 12,
+                        vy: Math.sin(me.angle) * 12,
+                        radius: 4,
+                        damage: 20,
+                        fromId: myId,
+                        life: 70
+                    });
+                    send({ type: 'shoot', x: bx, y: by, angle: me.angle });
+                }
+            }
+
+            // Enviar actualización de posición (cada ~50ms)
+            if (Date.now() - lastUpdate > 50) {
+                lastUpdate = Date.now();
+                send({
+                    type: 'update',
+                    x: me.x,
+                    y: me.y,
+                    angle: me.angle,
+                    emote: me.emote
+                });
+            }
+
+            // Balas
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                b.life--;
+
+                // Colisión con otros jugadores (solo si la bala es mía)
+                if (b.fromId === myId) {
+                    for (const [pid, p] of players) {
+                        if (p.alive && dist(b, p) < 18) {
+                            send({ type: 'hit', targetId: pid, damage: 22 });
+                            createParticles(b.x, b.y, '#fff', 6);
+                            b.life = 0;
+                            break;
+                        }
+                    }
+                }
+
+                // Colisión conmigo (balas enemigas)
+                if (b.fromId !== myId && me.alive && dist(b, me) < 16) {
+                    createParticles(b.x, b.y, '#e74c3c', 5);
+                    b.life = 0;
+                }
+
+                if (b.life <= 0) bullets.splice(i, 1);
+            }
+
+            // Partículas
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.vx *= 0.94; p.vy *= 0.94;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Cámara
+            camX = me.x - W / 2;
+            camY = me.y - H / 2;
+            camX = Math.max(0, Math.min(WORLD - W, camX));
+            camY = Math.max(0, Math.min(WORLD - H, camY));
+
+            // Dibujar
+            ctx.clearRect(0, 0, W, H);
+            ctx.save();
+            ctx.translate(-camX, -camY);
+
+            ctx.fillStyle = '#16213e';
+            ctx.fillRect(0, 0, WORLD, WORLD);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < WORLD; x += 60) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD); ctx.stroke();
+            }
+            for (let y = 0; y < WORLD; y += 60) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD, y); ctx.stroke();
+            }
+
+            // Balas
+            for (const b of bullets) {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = b.fromId === myId ? '#00e5ff' : '#ff5252';
+                ctx.fill();
+            }
+
+            // Otros jugadores
+            for (const [, p] of players) {
+                if (p.alive) {
+                    drawPerson(p.x, p.y, p.angle, p.color, p.walkCycle, p.emote, p.name, false);
+                }
+            }
+
+            // Yo
+            if (me.alive) {
+                drawPerson(me.x, me.y, me.angle, me.color, me.walkCycle, me.emote, me.name, true);
+            }
+
+            // Partículas
+            for (const p of particles) {
+                ctx.globalAlpha = p.life / p.maxLife;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+            requestAnimationFrame(loop);
+        }
+
+        // Controles
+        window.addEventListener('keydown', e => {
+            keys[e.key] = true;
+            if (e.key === 'Enter') {
+                const container = document.getElementById('chat-input-container');
+                const input = document.getElementById('chat-input');
+                if (container.style.display === 'block') {
+                    if (input.value.trim()) {
+                        send({ type: 'chat', message: input.value.trim() });
+                    }
+                    input.value = '';
+                    container.style.display = 'none';
+                } else {
+                    container.style.display = 'block';
+                    input.focus();
+                }
+            }
+            if (e.key === '1') doEmote('dance');
+            if (e.key === '2') doEmote('wave');
+            if (e.key === '3') doEmote('cheer');
+            if (e.key === '4') doEmote('sit');
+        });
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        canvas.addEventListener('mousemove', e => {
+            const r = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - r.left;
+            mouse.y = e.clientY - r.top;
+        });
+        canvas.addEventListener('mousedown', () => mouse.down = true);
+        canvas.addEventListener('mouseup', () => mouse.down = false);
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
