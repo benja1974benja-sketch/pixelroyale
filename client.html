@@ -2,12 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+
 <meta name="viewport"
       content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 
 <title>Pixel Royale 2.0</title>
 
 <style>
+
 *{
   box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
@@ -402,6 +404,7 @@ button{
   font-size:12px;
 }
 
+
 /* ==========================
        CONTROLES MÓVILES
    ========================== */
@@ -617,7 +620,9 @@ button{
     left:70px;
     bottom:140px;
   }
+
 }
+
 </style>
 </head>
 
@@ -657,6 +662,7 @@ ESCUDO
 
 </div>
 
+
 <div id="top-center" class="panel">
 
 <div id="phaseText">
@@ -669,6 +675,7 @@ SALA DE ESPERA
 
 </div>
 
+
 <div id="player-list" class="panel">
 
 <div class="title">
@@ -678,6 +685,7 @@ EQUIPOS / JUGADORES
 <div id="plist-content"></div>
 
 </div>
+
 
 <div id="chat-box"></div>
 
@@ -690,6 +698,7 @@ placeholder="Escribe y pulsa Enter..."
 >
 
 </div>
+
 
 <div id="hotbar">
 
@@ -714,7 +723,9 @@ onclick="setSlot(2)"
 
 </div>
 
+
 <div id="action" class="hidden"></div>
+
 
 <div class="emotes">
 
@@ -724,6 +735,7 @@ onclick="setSlot(2)"
 <button onclick="doEmote('sit')">🪑</button>
 
 </div>
+
 
 <div id="connection-status">
 Desconectado
@@ -864,6 +876,7 @@ ENTRAR
 
 <div id="lobby-status"></div>
 
+
 <div
 id="party-panel"
 class="party-box panel"
@@ -906,6 +919,7 @@ SALIR DEL EQUIPO
 
 </div>
 
+
 <div id="party-create">
 
 <button
@@ -930,6 +944,7 @@ onclick="joinParty()"
 </button>
 
 </div>
+
 
 <div class="hint">
 
@@ -1013,9 +1028,15 @@ let players = new Map();
 let trees = [];
 let loot = [];
 let walls = [];
+
 let bullets = [];
 
 let phase = "lobby";
+
+
+/* ==========================
+       CONTROLES
+   ========================== */
 
 let keys = {
   w:false,
@@ -1041,8 +1062,18 @@ let mobileAim = {
   active:false
 };
 
+
+/* ==========================
+       CÁMARA
+   ========================== */
+
 let camX = 0;
 let camY = 0;
+
+
+/* ==========================
+       ACCIONES
+   ========================== */
 
 let currentSlot = 2;
 let buildMode = false;
@@ -1055,8 +1086,18 @@ let gameRunning = false;
 let myKills = 0;
 let myXP = 0;
 
+
+/* ==========================
+       EQUIPO
+   ========================== */
+
 let partyCode = null;
 let partyMembers = [];
+
+
+/* ==========================
+       STORM
+   ========================== */
 
 let storm = {
   x:1200,
@@ -1065,18 +1106,25 @@ let storm = {
 };
 
 
-/* =================================
-      MOVIMIENTO LOCAL SUAVE
-   ================================= */
+/* =====================================================
+       SISTEMA DE MOVIMIENTO CORREGIDO
+   ===================================================== */
 
 /*
-  Esta es la parte importante.
+  me.x / me.y
+  ----------------
+  Posición que vemos en pantalla.
 
-  me.x / me.y = posición visual/local.
-  serverPosition = última posición conocida por servidor.
+  serverPosition
+  ----------------
+  Última posición recibida del servidor.
 
-  Ya no copiamos continuamente la posición
-  del servidor encima del jugador.
+  La posición local NO se reemplaza continuamente
+  por la del servidor.
+
+  Esto evita:
+
+  CAMINAR → SERVIDOR → VOLVER ATRÁS
 */
 
 let serverPosition = {
@@ -1086,34 +1134,53 @@ let serverPosition = {
 
 let movementInitialized = false;
 
-let lastFrameTime = performance.now();
+let lastFrameTime =
+  performance.now();
 
-const PLAYER_SPEED = 225; // píxeles por segundo
+const PLAYER_SPEED = 225;
+
+/*
+  Mandamos posiciones frecuentemente.
+  40 ms = 25 actualizaciones por segundo.
+*/
 
 const POSITION_SEND_RATE = 40;
 
 
-/* =================================
+/* =====================================================
        ANIMACIÓN
-   ================================= */
+   ===================================================== */
 
 let playerAnimations = new Map();
+
+let playerAnimationTime = 0;
 
 function getPlayerAnimation(id){
 
   if(!playerAnimations.has(id)){
 
-    playerAnimations.set(id,{
-      phase:Math.random() * Math.PI * 2,
-      moving:false,
-      lastX:null,
-      lastY:null,
-      lastTime:performance.now()
-    });
+    playerAnimations.set(
+      id,
+      {
+        phase:
+          Math.random() *
+          Math.PI *
+          2,
+
+        moving:false,
+
+        lastX:null,
+        lastY:null,
+
+        lastTime:
+          performance.now()
+      }
+    );
 
   }
 
   return playerAnimations.get(id);
+
 }
 
 
@@ -1141,11 +1208,14 @@ function connect(){
       : "ws:";
 
   const host =
-    location.host || "localhost:3000";
+    location.host ||
+    "localhost:3000";
 
   ws =
     new WebSocket(
-      protocol + "//" + host
+      protocol +
+      "//" +
+      host
     );
 
   ws.onopen = () => {
@@ -1162,7 +1232,9 @@ function connect(){
       "lobby-status"
     ).textContent =
       "Conectado. Crea un equipo o únete con código.";
+
   };
+
 
   ws.onclose = () => {
 
@@ -1174,7 +1246,9 @@ function connect(){
       "lobby-status"
     ).textContent =
       "Desconectado del servidor.";
+
   };
+
 
   ws.onerror = () => {
 
@@ -1182,7 +1256,9 @@ function connect(){
       "lobby-status"
     ).textContent =
       "No se pudo conectar.";
+
   };
+
 
   ws.onmessage = event => {
 
@@ -1191,7 +1267,9 @@ function connect(){
     try{
 
       data =
-        JSON.parse(event.data);
+        JSON.parse(
+          event.data
+        );
 
     }catch{
 
@@ -1205,11 +1283,13 @@ function connect(){
 
 }
 
+
 function send(data){
 
   if(
     ws &&
-    ws.readyState === WebSocket.OPEN
+    ws.readyState ===
+    WebSocket.OPEN
   ){
 
     ws.send(
@@ -1219,6 +1299,7 @@ function send(data){
   }
 
 }
+
 
 function setConnection(ok){
 
@@ -1246,37 +1327,72 @@ function setConnection(ok){
 
 function handleMessage(data){
 
+  /* ======================
+        WELCOME
+     ====================== */
+
   if(data.type === "welcome"){
 
-    myId = data.id;
+    myId =
+      data.id;
 
     WORLD =
-      data.world || 2400;
+      data.world ||
+      2400;
 
     return;
+
   }
 
+
+  /* ======================
+          JOINED
+     ====================== */
 
   if(data.type === "joined"){
 
-    me = data.player;
+    me = {
+      ...data.player
+    };
 
-    serverPosition.x = me.x;
-    serverPosition.y = me.y;
+    /*
+      Inicializamos las dos posiciones
+      exactamente iguales.
+    */
 
-    movementInitialized = true;
+    serverPosition.x =
+      me.x;
+
+    serverPosition.y =
+      me.y;
+
+    movementInitialized =
+      true;
+
+    lastFrameTime =
+      performance.now();
 
     document
-      .getElementById("start-overlay")
-      .classList.remove("hidden");
+      .getElementById(
+        "start-overlay"
+      )
+      .classList.remove(
+        "hidden"
+      );
 
     return;
+
   }
 
 
+  /* ======================
+       PARTY CREATED
+     ====================== */
+
   if(data.type === "partyCreated"){
 
-    partyCode = data.code;
+    partyCode =
+      data.code;
 
     document.getElementById(
       "party-code"
@@ -1299,8 +1415,13 @@ function handleMessage(data){
       "Comparte este código con tus amigos.";
 
     return;
+
   }
 
+
+  /* ======================
+       PARTY RESULT
+     ====================== */
 
   if(data.type === "partyResult"){
 
@@ -1309,9 +1430,11 @@ function handleMessage(data){
       document.getElementById(
         "lobby-status"
       ).textContent =
-        "❌ " + data.error;
+        "❌ " +
+        data.error;
 
       return;
+
     }
 
     document.getElementById(
@@ -1320,26 +1443,44 @@ function handleMessage(data){
       "Te has unido al equipo.";
 
     return;
+
   }
 
+
+  /* ======================
+          LOBBY
+     ====================== */
 
   if(data.type === "lobby"){
 
     updateLobby(data);
 
     return;
+
   }
 
+
+  /* ======================
+       MATCH STARTING
+     ====================== */
 
   if(data.type === "matchStarting"){
 
     document
-      .getElementById("start-overlay")
-      .classList.add("hidden");
+      .getElementById(
+        "start-overlay"
+      )
+      .classList.add(
+        "hidden"
+      );
 
     document
-      .getElementById("count-overlay")
-      .classList.remove("hidden");
+      .getElementById(
+        "count-overlay"
+      )
+      .classList.remove(
+        "hidden"
+      );
 
     document.getElementById(
       "count-number"
@@ -1347,8 +1488,13 @@ function handleMessage(data){
       data.seconds;
 
     return;
+
   }
 
+
+  /* ======================
+         COUNTDOWN
+     ====================== */
 
   if(data.type === "countdown"){
 
@@ -1358,101 +1504,177 @@ function handleMessage(data){
       data.seconds;
 
     return;
+
   }
 
+
+  /* ======================
+        MATCH START
+     ====================== */
 
   if(data.type === "matchStart"){
 
     WORLD =
-      data.world || WORLD;
+      data.world ||
+      WORLD;
 
     storm =
-      data.storm || storm;
+      data.storm ||
+      storm;
 
     phase =
       "playing";
 
     document
-      .getElementById("count-overlay")
-      .classList.add("hidden");
+      .getElementById(
+        "count-overlay"
+      )
+      .classList.add(
+        "hidden"
+      );
 
-    gameRunning = true;
+    gameRunning =
+      true;
 
-    lastFrameTime = performance.now();
+    lastFrameTime =
+      performance.now();
 
-    requestAnimationFrame(loop);
+    /*
+      Sincronizamos una última vez
+      antes de empezar.
+    */
+
+    if(me){
+
+      serverPosition.x =
+        me.x;
+
+      serverPosition.y =
+        me.y;
+
+    }
+
+    requestAnimationFrame(
+      loop
+    );
 
     return;
+
   }
 
+
+  /* ======================
+           STATE
+     ====================== */
 
   if(data.type === "state"){
 
     phase =
       data.phase;
 
+
     if(data.trees)
-      trees = data.trees;
+      trees =
+        data.trees;
+
 
     if(data.loot)
-      loot = data.loot;
+      loot =
+        data.loot;
+
 
     if(data.walls)
-      walls = data.walls;
+      walls =
+        data.walls;
+
 
     if(data.storm)
-      storm = data.storm;
+      storm =
+        data.storm;
 
 
     if(data.players){
 
       players.clear();
 
-      for(const p of data.players){
+
+      for(
+        const p of data.players
+      ){
+
+        /*
+          =========================
+             MI PROPIO JUGADOR
+          =========================
+        */
 
         if(p.id === myId){
 
           if(!me){
 
-            me = p;
+            me = {
+              ...p
+            };
 
-            serverPosition.x = p.x;
-            serverPosition.y = p.y;
+            serverPosition.x =
+              p.x;
 
-            movementInitialized = true;
+            serverPosition.y =
+              p.y;
+
+            movementInitialized =
+              true;
 
           }else{
 
             /*
-              Datos que SÍ vienen del servidor.
+              ESTADÍSTICAS
             */
 
-            me.health = p.health;
-            me.shield = p.shield;
-            me.ammo = p.ammo;
-            me.maxAmmo = p.maxAmmo;
-            me.materials = p.materials;
-            me.kills = p.kills;
-            me.xp = p.xp;
-            me.team = p.team;
-            me.alive = p.alive;
-            me.name = p.name;
+            me.health =
+              p.health;
+
+            me.shield =
+              p.shield;
+
+            me.ammo =
+              p.ammo;
+
+            me.maxAmmo =
+              p.maxAmmo;
+
+            me.materials =
+              p.materials;
+
+            me.kills =
+              p.kills;
+
+            me.xp =
+              p.xp;
+
+            me.team =
+              p.team;
+
+            me.alive =
+              p.alive;
+
+            me.name =
+              p.name;
+
 
             /*
-              Guardamos la posición del servidor,
-              pero NO la copiamos directamente
-              sobre me.x / me.y.
+              GUARDAMOS POSICIÓN SERVIDOR
             */
 
-            serverPosition.x = p.x;
-            serverPosition.y = p.y;
+            serverPosition.x =
+              p.x;
+
+            serverPosition.y =
+              p.y;
+
 
             /*
-              Solo hacemos una corrección fuerte
-              si estamos MUY lejos.
-
-              Esto evita que un pequeño retraso
-              del servidor haga volver al jugador.
+              DIFERENCIA ENTRE CLIENTE Y SERVIDOR
             */
 
             const distanceFromServer =
@@ -1461,31 +1683,54 @@ function handleMessage(data){
                 p.y - me.y
               );
 
-            if(distanceFromServer > 250){
 
-              me.x = p.x;
-              me.y = p.y;
+            /*
+              Si la diferencia es pequeña,
+              NO hacemos snap.
+
+              Si es grande significa que
+              realmente nos desincronizamos.
+            */
+
+            if(
+              distanceFromServer >
+              250
+            ){
+
+              me.x =
+                p.x;
+
+              me.y =
+                p.y;
 
             }
 
           }
 
+
           myKills =
-            p.kills || 0;
+            p.kills ||
+            0;
 
           myXP =
-            p.xp || 0;
+            p.xp ||
+            0;
 
-        }else{
+        }
 
-          /*
-            Jugadores enemigos/aliados.
-            Los guardamos para interpolarlos
-            visualmente.
-          */
+
+        /*
+          =========================
+             OTROS JUGADORES
+          =========================
+        */
+
+        else{
 
           const old =
-            players.get(p.id);
+            players.get(
+              p.id
+            );
 
           if(old){
 
@@ -1499,8 +1744,11 @@ function handleMessage(data){
 
           }else{
 
-            p.renderX = p.x;
-            p.renderY = p.y;
+            p.renderX =
+              p.x;
+
+            p.renderY =
+              p.y;
 
           }
 
@@ -1515,18 +1763,30 @@ function handleMessage(data){
 
     }
 
+
     updateHUD();
+
     updateList();
 
     return;
+
   }
 
+
+  /* ======================
+        ELIMINATION
+     ====================== */
 
   if(data.type === "elimination"){
 
     return;
+
   }
 
+
+  /* ======================
+            CHAT
+     ====================== */
 
   if(data.type === "chat"){
 
@@ -1536,23 +1796,32 @@ function handleMessage(data){
     );
 
     return;
+
   }
 
 
+  /* ======================
+         MATCH END
+     ====================== */
+
   if(data.type === "matchEnd"){
 
-    gameRunning = false;
+    gameRunning =
+      false;
 
-    phase = "ended";
+    phase =
+      "ended";
 
     const result =
       data.results.find(
-        r => r.id === myId
+        r =>
+          r.id === myId
       );
 
     const victory =
       result &&
       result.victory;
+
 
     document.getElementById(
       "end-title"
@@ -1560,6 +1829,7 @@ function handleMessage(data){
       victory
         ? "🏆 VICTORIA"
         : "💀 DERROTA";
+
 
     document.getElementById(
       "reward"
@@ -1571,22 +1841,34 @@ function handleMessage(data){
       🪙 Monedas: ${result?.coins || 0}
       `;
 
+
     document
-      .getElementById("end-overlay")
-      .classList.remove("hidden");
+      .getElementById(
+        "end-overlay"
+      )
+      .classList.remove(
+        "hidden"
+      );
 
     return;
+
   }
 
+
+  /* ======================
+           ERROR
+     ====================== */
 
   if(data.type === "error"){
 
     document.getElementById(
       "lobby-status"
     ).textContent =
-      "❌ " + data.message;
+      "❌ " +
+      data.message;
 
     return;
+
   }
 
 }
@@ -1616,6 +1898,7 @@ function createParty(){
       "Elige equipo de 2, 3 o 4.";
 
     return;
+
   }
 
   send({
@@ -1624,6 +1907,7 @@ function createParty(){
   });
 
 }
+
 
 function joinParty(){
 
@@ -1636,7 +1920,10 @@ function joinParty(){
       /[^A-Z0-9]/g,
       ""
     )
-    .slice(0,5);
+    .slice(
+      0,
+      5
+    );
 
   if(code.length !== 5){
 
@@ -1646,6 +1933,7 @@ function joinParty(){
       "El código debe tener 5 caracteres.";
 
     return;
+
   }
 
   send({
@@ -1655,13 +1943,15 @@ function joinParty(){
 
 }
 
+
 function leaveParty(){
 
   send({
     type:"leaveParty"
   });
 
-  partyCode = null;
+  partyCode =
+    null;
 
   document.getElementById(
     "party-panel"
@@ -1672,7 +1962,9 @@ function leaveParty(){
     "party-create"
   ).style.display =
     "block";
+
 }
+
 
 function toggleReady(){
 
@@ -1682,6 +1974,7 @@ function toggleReady(){
 
 }
 
+
 function startMatch(){
 
   send({
@@ -1690,57 +1983,73 @@ function startMatch(){
 
 }
 
+
 function updateLobby(data){
 
   if(!data.parties)
     return;
 
-  let myParty = null;
+  let myParty =
+    null;
 
-  for(const party of data.parties){
+
+  for(
+    const party of data.parties
+  ){
 
     if(
       party.members.some(
-        m => m.id === myId
+        m =>
+          m.id === myId
       )
     ){
 
-      myParty = party;
+      myParty =
+        party;
+
       break;
 
     }
 
   }
 
+
   if(myParty){
 
     partyCode =
       myParty.code;
+
 
     document.getElementById(
       "party-panel"
     ).style.display =
       "block";
 
+
     document.getElementById(
       "party-create"
     ).style.display =
       "none";
+
 
     document.getElementById(
       "party-code"
     ).textContent =
       myParty.code;
 
+
     const box =
       document.getElementById(
         "party-members"
       );
 
-    box.innerHTML = "";
+    box.innerHTML =
+      "";
+
 
     for(
-      const member of myParty.members
+      const member of
+      myParty.members
     ){
 
       const div =
@@ -1750,6 +2059,7 @@ function updateLobby(data){
 
       div.className =
         "member";
+
 
       div.textContent =
         (
@@ -1767,15 +2077,20 @@ function updateLobby(data){
             : "  ⏳"
         );
 
-      box.appendChild(div);
+
+      box.appendChild(
+        div
+      );
 
     }
 
   }else{
 
-    partyCode = null;
+    partyCode =
+      null;
 
   }
+
 
   updateList();
 
@@ -1791,6 +2106,7 @@ function updateHUD(){
   if(!me)
     return;
 
+
   document.getElementById(
     "health-bar"
   ).style.width =
@@ -1800,7 +2116,9 @@ function updateHUD(){
         100,
         me.health
       )
-    ) + "%";
+    ) +
+    "%";
+
 
   document.getElementById(
     "shield-bar"
@@ -1811,17 +2129,21 @@ function updateHUD(){
         100,
         me.shield
       )
-    ) + "%";
+    ) +
+    "%";
+
 
   document.getElementById(
     "stats"
   ).textContent =
     `🪵 ${me.materials || 0} · 💀 ${me.kills || 0} · ⭐ ${me.xp || 0}`;
 
+
   document.getElementById(
     "ammo"
   ).textContent =
     `${me.ammo || 0}/${me.maxAmmo || 0}`;
+
 
   document.getElementById(
     "phaseText"
@@ -1832,14 +2154,17 @@ function updateHUD(){
         ? "SALA DE ESPERA"
         : phase.toUpperCase();
 
+
   document.getElementById(
     "storm"
   ).textContent =
     `🌪️ Zona: ${Math.round(
-      storm.radius || 0
+      storm.radius ||
+      0
     )}`;
 
 }
+
 
 function updateList(){
 
@@ -1848,41 +2173,55 @@ function updateList(){
       "plist-content"
     );
 
-  let html = "";
+  let html =
+    "";
+
 
   if(me){
 
-    html += `
+    html +=
+      `
       <div class="plist-item me">
+
         🟢 ${escapeHTML(me.name)}
+
         <span class="team">
           T${me.team || 1}
         </span>
+
       </div>
-    `;
+      `;
 
   }
+
 
   for(
     const p of players.values()
   ){
 
-    html += `
+    html +=
+      `
       <div class="plist-item ${p.alive ? "" : "dead"}">
+
         ${p.alive ? "🟢" : "☠️"}
+
         ${escapeHTML(p.name)}
+
         <span class="team">
           T${p.team || 1}
         </span>
+
       </div>
-    `;
+      `;
 
   }
+
 
   box.innerHTML =
     html;
 
 }
+
 
 function escapeHTML(text){
 
@@ -1921,15 +2260,21 @@ function addChat(
   div.className =
     "chat-message";
 
+
   const b =
     document.createElement(
       "b"
     );
 
   b.textContent =
-    name + ": ";
+    name +
+    ": ";
 
-  div.appendChild(b);
+
+  div.appendChild(
+    b
+  );
+
 
   div.appendChild(
     document.createTextNode(
@@ -1937,10 +2282,15 @@ function addChat(
     )
   );
 
-  box.appendChild(div);
+
+  box.appendChild(
+    div
+  );
+
 
   while(
-    box.children.length > 8
+    box.children.length >
+    8
   ){
 
     box.firstChild.remove();
@@ -1949,33 +2299,40 @@ function addChat(
 
 }
 
+
 document
-.getElementById(
-  "chat-input"
-)
-.addEventListener(
-  "keydown",
-  e => {
+  .getElementById(
+    "chat-input"
+  )
+  .addEventListener(
+    "keydown",
+    e => {
 
-    if(e.key !== "Enter")
-      return;
+      if(
+        e.key !== "Enter"
+      )
+        return;
 
-    const value =
-      e.target.value.trim();
 
-    if(value){
+      const value =
+        e.target.value.trim();
 
-      send({
-        type:"chat",
-        message:value
-      });
+
+      if(value){
+
+        send({
+          type:"chat",
+          message:value
+        });
+
+      }
+
+
+      e.target.value =
+        "";
 
     }
-
-    e.target.value = "";
-
-  }
-);
+  );
 
 
 /* ==========================
@@ -1997,8 +2354,10 @@ window.addEventListener(
 
     }
 
+
     const key =
       e.key.toLowerCase();
+
 
     if(
       key === "w" ||
@@ -2007,41 +2366,52 @@ window.addEventListener(
       key === "d"
     ){
 
-      keys[key] = true;
+      keys[key] =
+        true;
 
       e.preventDefault();
 
     }
 
+
     if(key === "1")
       setSlot(1);
+
 
     if(key === "2")
       setSlot(2);
 
+
     if(key === "q")
       toggleBuild();
+
 
     if(key === "e")
       pickup();
 
+
     if(key === "r")
       reload();
+
 
     if(key === "3")
       doEmote("dance");
 
+
     if(key === "4")
       doEmote("wave");
 
+
     if(key === "5")
       doEmote("cheer");
+
 
     if(key === "6")
       doEmote("sit");
 
   }
 );
+
 
 window.addEventListener(
   "keyup",
@@ -2051,10 +2421,12 @@ window.addEventListener(
       e.key.toLowerCase();
 
     if(key in keys)
-      keys[key] = false;
+      keys[key] =
+        false;
 
   }
 );
+
 
 canvas.addEventListener(
   "mousemove",
@@ -2062,6 +2434,7 @@ canvas.addEventListener(
 
     const rect =
       canvas.getBoundingClientRect();
+
 
     mouse.x =
       (
@@ -2072,6 +2445,7 @@ canvas.addEventListener(
         W /
         rect.width
       );
+
 
     mouse.y =
       (
@@ -2086,29 +2460,35 @@ canvas.addEventListener(
   }
 );
 
+
 canvas.addEventListener(
   "mousedown",
   e => {
 
     if(e.button === 0)
-      mouse.down = true;
+      mouse.down =
+        true;
 
   }
 );
+
 
 window.addEventListener(
   "mouseup",
   e => {
 
     if(e.button === 0)
-      mouse.down = false;
+      mouse.down =
+        false;
 
   }
 );
 
+
 canvas.addEventListener(
   "contextmenu",
-  e => e.preventDefault()
+  e =>
+    e.preventDefault()
 );
 
 
@@ -2118,9 +2498,12 @@ canvas.addEventListener(
 
 function setSlot(n){
 
-  currentSlot = n;
+  currentSlot =
+    n;
 
-  buildMode = false;
+  buildMode =
+    false;
+
 
   document
     .getElementById("slot1")
@@ -2128,6 +2511,7 @@ function setSlot(n){
       "active",
       n === 1
     );
+
 
   document
     .getElementById("slot2")
@@ -2138,13 +2522,16 @@ function setSlot(n){
 
 }
 
+
 function toggleBuild(){
 
   if(!me?.alive)
     return;
 
+
   buildMode =
     !buildMode;
+
 
   document
     .getElementById("action")
@@ -2152,6 +2539,7 @@ function toggleBuild(){
       "hidden",
       !buildMode
     );
+
 
   document.getElementById(
     "action"
@@ -2162,13 +2550,16 @@ function toggleBuild(){
 
 }
 
+
 function build(){
 
   if(!me?.alive)
     return;
 
+
   if(me.materials < 10)
     return;
+
 
   const x =
     me.x +
@@ -2176,11 +2567,13 @@ function build(){
     70 -
     30;
 
+
   const y =
     me.y +
     Math.sin(me.angle) *
     70 -
     30;
+
 
   const kinds =
     [
@@ -2190,12 +2583,16 @@ function build(){
       "roof"
     ];
 
+
   const kind =
     kinds[
       Math.floor(
-        performance.now() / 1000
-      ) % kinds.length
+        performance.now() /
+        1000
+      ) %
+      kinds.length
     ];
+
 
   send({
     type:"build",
@@ -2206,40 +2603,56 @@ function build(){
 
 }
 
+
 function pickup(){
 
   if(!me?.alive)
     return;
 
-  let nearest = null;
-  let best = 80;
+
+  let nearest =
+    null;
+
+  let best =
+    80;
+
 
   for(
     const item of loot
   ){
 
     const d =
-      distance(me,item);
+      distance(
+        me,
+        item
+      );
+
 
     if(d < best){
 
-      best = d;
-      nearest = item;
+      best =
+        d;
+
+      nearest =
+        item;
 
     }
 
   }
 
+
   if(nearest){
 
     send({
       type:"pickup",
-      lootId:nearest.id
+      lootId:
+        nearest.id
     });
 
   }
 
 }
+
 
 function swing(){
 
@@ -2252,6 +2665,7 @@ function swing(){
 
   }
 
+
   if(
     Date.now() -
     lastSwing <
@@ -2262,38 +2676,54 @@ function swing(){
 
   }
 
+
   lastSwing =
     Date.now();
 
-  let nearest = null;
-  let best = 65;
+
+  let nearest =
+    null;
+
+  let best =
+    65;
+
 
   for(
     const tree of trees
   ){
 
     const d =
-      distance(me,tree);
+      distance(
+        me,
+        tree
+      );
+
 
     if(d < best){
 
-      best = d;
-      nearest = tree;
+      best =
+        d;
+
+      nearest =
+        tree;
 
     }
 
   }
 
+
   if(nearest){
 
     send({
       type:"treeHit",
-      treeId:nearest.id
+      treeId:
+        nearest.id
     });
 
   }
 
 }
+
 
 function shoot(){
 
@@ -2307,16 +2737,19 @@ function shoot(){
 
   }
 
+
   send({
     type:"shoot"
   });
 
 }
 
+
 function reload(){
 
   if(!me?.alive)
     return;
+
 
   send({
     type:"reload"
@@ -2324,10 +2757,12 @@ function reload(){
 
 }
 
+
 function doEmote(type){
 
   if(!me?.alive)
     return;
+
 
   send({
     type:"emote",
@@ -2347,29 +2782,43 @@ function setupJoystick(
   callback
 ){
 
-  let pointerId = null;
+  let pointerId =
+    null;
+
 
   function update(e){
 
     const rect =
       element.getBoundingClientRect();
 
+
     const cx =
       rect.left +
-      rect.width / 2;
+      rect.width /
+      2;
+
 
     const cy =
       rect.top +
-      rect.height / 2;
+      rect.height /
+      2;
+
 
     let dx =
-      e.clientX - cx;
+      e.clientX -
+      cx;
+
 
     let dy =
-      e.clientY - cy;
+      e.clientY -
+      cy;
+
 
     const max =
-      rect.width / 2 - 27;
+      rect.width /
+      2 -
+      27;
+
 
     const len =
       Math.hypot(
@@ -2377,18 +2826,25 @@ function setupJoystick(
         dy
       );
 
+
     if(len > max){
 
       dx =
-        dx / len * max;
+        dx /
+        len *
+        max;
 
       dy =
-        dy / len * max;
+        dy /
+        len *
+        max;
 
     }
 
+
     knob.style.transform =
       `translate(${dx}px,${dy}px)`;
+
 
     callback(
       dx / max,
@@ -2397,12 +2853,16 @@ function setupJoystick(
 
   }
 
+
   function end(){
 
-    pointerId = null;
+    pointerId =
+      null;
+
 
     knob.style.transform =
       "translate(0,0)";
+
 
     callback(
       0,
@@ -2410,6 +2870,7 @@ function setupJoystick(
     );
 
   }
+
 
   element.addEventListener(
     "pointerdown",
@@ -2420,26 +2881,31 @@ function setupJoystick(
       pointerId =
         e.pointerId;
 
+
       element.setPointerCapture(
         pointerId
       );
+
 
       update(e);
 
     }
   );
 
+
   element.addEventListener(
     "pointermove",
     e => {
 
       if(
-        e.pointerId !== pointerId
+        e.pointerId !==
+        pointerId
       ){
 
         return;
 
       }
+
 
       e.preventDefault();
 
@@ -2448,10 +2914,12 @@ function setupJoystick(
     }
   );
 
+
   element.addEventListener(
     "pointerup",
     end
   );
+
 
   element.addEventListener(
     "pointercancel",
@@ -2459,6 +2927,7 @@ function setupJoystick(
   );
 
 }
+
 
 setupJoystick(
   document.getElementById(
@@ -2469,17 +2938,15 @@ setupJoystick(
   ),
   (x,y) => {
 
-    mobileMove.x = x;
-    mobileMove.y = y;
+    mobileMove.x =
+      x;
 
-    /*
-      Guardamos directamente el joystick.
-      El movimiento ya no depende de
-      convertirlo a WASD.
-    */
+    mobileMove.y =
+      y;
 
   }
 );
+
 
 setupJoystick(
   document.getElementById(
@@ -2491,12 +2958,18 @@ setupJoystick(
   (x,y) => {
 
     if(
-      Math.hypot(x,y) > 0.15
+      Math.hypot(x,y) >
+      0.15
     ){
 
-      mobileAim.x = x;
-      mobileAim.y = y;
-      mobileAim.active = true;
+      mobileAim.x =
+        x;
+
+      mobileAim.y =
+        y;
+
+      mobileAim.active =
+        true;
 
       meAngleFromMobile();
 
@@ -2505,10 +2978,12 @@ setupJoystick(
   }
 );
 
+
 function meAngleFromMobile(){
 
   if(!me)
     return;
+
 
   me.angle =
     Math.atan2(
@@ -2530,10 +3005,14 @@ function mobileButton(
 ){
 
   const button =
-    document.getElementById(id);
+    document.getElementById(
+      id
+    );
+
 
   if(!button)
     return;
+
 
   button.addEventListener(
     "pointerdown",
@@ -2541,8 +3020,10 @@ function mobileButton(
 
       e.preventDefault();
 
+
       if(down)
         down();
+
 
       button.setPointerCapture(
         e.pointerId
@@ -2551,17 +3032,20 @@ function mobileButton(
     }
   );
 
+
   button.addEventListener(
     "pointerup",
     e => {
 
       e.preventDefault();
 
+
       if(up)
         up();
 
     }
   );
+
 
   button.addEventListener(
     "pointercancel",
@@ -2575,29 +3059,35 @@ function mobileButton(
 
 }
 
+
 mobileButton(
   "mobile-fire",
   () => {
 
-    mouse.down = true;
+    mouse.down =
+      true;
 
   },
   () => {
 
-    mouse.down = false;
+    mouse.down =
+      false;
 
   }
 );
+
 
 mobileButton(
   "mobile-pickaxe",
   () => {
 
     setSlot(1);
+
     swing();
 
   }
 );
+
 
 mobileButton(
   "mobile-weapon",
@@ -2608,6 +3098,7 @@ mobileButton(
   }
 );
 
+
 mobileButton(
   "mobile-pickup",
   () => {
@@ -2616,6 +3107,7 @@ mobileButton(
 
   }
 );
+
 
 mobileButton(
   "mobile-reload",
@@ -2626,11 +3118,13 @@ mobileButton(
   }
 );
 
+
 mobileButton(
   "mobile-build",
   () => {
 
     toggleBuild();
+
 
     if(buildMode)
       build();
@@ -2645,33 +3139,46 @@ mobileButton(
 
 function getMovementDirection(){
 
-  let dx = 0;
-  let dy = 0;
+  let dx =
+    0;
+
+  let dy =
+    0;
+
 
   /*
-    En móvil usamos el joystick directamente.
+    MÓVIL
   */
 
   if(
     isMobileDevice() &&
     (
-      Math.abs(mobileMove.x) > 0.05 ||
-      Math.abs(mobileMove.y) > 0.05
+      Math.abs(mobileMove.x) >
+      0.05 ||
+      Math.abs(mobileMove.y) >
+      0.05
     )
   ){
 
-    dx = mobileMove.x;
-    dy = mobileMove.y;
+    dx =
+      mobileMove.x;
 
-  }else{
+    dy =
+      mobileMove.y;
 
-    /*
-      PC: WASD.
-    */
+  }
+
+
+  /*
+    PC
+  */
+
+  else{
 
     dx =
       (keys.d ? 1 : 0) -
       (keys.a ? 1 : 0);
+
 
     dy =
       (keys.s ? 1 : 0) -
@@ -2679,63 +3186,91 @@ function getMovementDirection(){
 
   }
 
+
   const length =
     Math.hypot(
       dx,
       dy
     );
 
+
+  /*
+    Evita que diagonal sea más rápida.
+  */
+
   if(length > 1){
 
-    dx /= length;
-    dy /= length;
+    dx /=
+      length;
+
+    dy /=
+      length;
 
   }
+
 
   return {
     x:dx,
     y:dy,
-    moving:length > 0.05
+    moving:
+      length >
+      0.05
   };
 
 }
 
 
-/* ==========================
-       GAME LOOP
-   ========================== */
+/* =====================================================
+       GAME LOOP — MOVIMIENTO CORREGIDO
+   ===================================================== */
 
-function loop(){
+function loop(timestamp){
 
   if(!gameRunning)
     return;
 
+
   if(!me){
 
-    requestAnimationFrame(loop);
+    requestAnimationFrame(
+      loop
+    );
 
     return;
 
   }
 
-  const now =
-    performance.now();
 
   /*
-    Delta time.
+    Si el navegador no manda timestamp
+    usamos performance.now().
+  */
 
-    Esto hace que la velocidad sea igual
-    aunque el dispositivo tenga 30, 60
-    o 120 FPS.
+  const now =
+    timestamp ||
+    performance.now();
+
+
+  /*
+    DELTA TIME
+
+    Hace que la velocidad sea estable
+    a 30 / 60 / 120 FPS.
   */
 
   let delta =
-    (now - lastFrameTime) / 1000;
+    (
+      now -
+      lastFrameTime
+    ) / 1000;
 
-  lastFrameTime = now;
+
+  lastFrameTime =
+    now;
+
 
   /*
-    Evita saltos enormes si la pestaña
+    Evitamos teletransportes si la pestaña
     estuvo congelada.
   */
 
@@ -2746,7 +3281,9 @@ function loop(){
     );
 
 
-  let moving = false;
+  let moving =
+    false;
+
 
   if(
     me.alive &&
@@ -2756,25 +3293,42 @@ function loop(){
     const movement =
       getMovementDirection();
 
-    if(movement.moving){
+
+    moving =
+      movement.moving;
+
+
+    /*
+      ============================
+       MOVIMIENTO LOCAL
+      ============================
+
+      Aquí está la solución.
+
+      El personaje se mueve localmente
+      y no espera la respuesta del servidor.
+    */
+
+    if(moving){
 
       me.x +=
         movement.x *
         PLAYER_SPEED *
         delta;
 
+
       me.y +=
         movement.y *
         PLAYER_SPEED *
         delta;
 
-      moving = true;
-
     }
 
 
     /*
-      Límites del mapa.
+      ============================
+       LÍMITES DEL MAPA
+      ============================
     */
 
     me.x =
@@ -2785,6 +3339,7 @@ function loop(){
           me.x
         )
       );
+
 
     me.y =
       Math.max(
@@ -2797,7 +3352,97 @@ function loop(){
 
 
     /*
-      Apuntado.
+      ============================
+          CORRECCIÓN SERVIDOR
+      ============================
+
+      Mientras caminamos NO tiramos
+      del personaje hacia atrás.
+
+      Solo corregimos si existe una
+      desincronización realmente grande.
+    */
+
+    if(
+      Number.isFinite(
+        serverPosition.x
+      ) &&
+      Number.isFinite(
+        serverPosition.y
+      )
+    ){
+
+      const errorX =
+        serverPosition.x -
+        me.x;
+
+
+      const errorY =
+        serverPosition.y -
+        me.y;
+
+
+      const error =
+        Math.hypot(
+          errorX,
+          errorY
+        );
+
+
+      /*
+        Si estamos quietos, podemos
+        acercarnos suavemente al servidor.
+      */
+
+      if(
+        !moving &&
+        error > 2 &&
+        error < 120
+      ){
+
+        const correction =
+          Math.min(
+            1,
+            delta * 7
+          );
+
+
+        me.x +=
+          errorX *
+          correction;
+
+
+        me.y +=
+          errorY *
+          correction;
+
+      }
+
+
+      /*
+        Si la diferencia es enorme,
+        probablemente el servidor nos
+        ha corregido por una colisión,
+        muerte, respawn, etc.
+      */
+
+      if(error > 250){
+
+        me.x =
+          serverPosition.x;
+
+        me.y =
+          serverPosition.y;
+
+      }
+
+    }
+
+
+    /*
+      ============================
+            APUNTADO
+      ============================
     */
 
     if(
@@ -2807,15 +3452,19 @@ function loop(){
 
       me.angle =
         Math.atan2(
-          mouse.y - H / 2,
-          mouse.x - W / 2
+          mouse.y -
+          H / 2,
+          mouse.x -
+          W / 2
         );
 
     }
 
 
     /*
-      Disparo.
+      ============================
+            DISPARO
+      ============================
     */
 
     if(mouse.down){
@@ -2826,25 +3475,45 @@ function loop(){
 
 
     /*
-      Sincronización con servidor.
+      ============================
+       ENVIAR POSICIÓN
+      ============================
 
-      Mandamos la posición cada 40 ms,
-      pero NO esperamos al servidor
-      para seguir caminando.
+      40ms = 25 veces por segundo.
+
+      Como la velocidad es 225 px/s,
+      cada actualización avanza aprox.
+      9 píxeles.
+
+      Esto evita que el servidor
+      rechace grandes saltos.
     */
 
     if(
-      now - lastUpdate >
+      now -
+      lastUpdate >=
       POSITION_SEND_RATE
     ){
 
-      lastUpdate = now;
+      lastUpdate =
+        now;
+
 
       send({
         type:"update",
-        x:me.x,
-        y:me.y,
-        angle:me.angle
+
+        x:
+          Math.round(
+            me.x
+          ),
+
+        y:
+          Math.round(
+            me.y
+          ),
+
+        angle:
+          me.angle
       });
 
     }
@@ -2852,14 +3521,26 @@ function loop(){
   }
 
 
+  /*
+    Animación
+  */
+
   updatePlayerAnimation(
     moving,
     delta
   );
 
+
+  /*
+    Dibujar
+  */
+
   draw();
 
-  requestAnimationFrame(loop);
+
+  requestAnimationFrame(
+    loop
+  );
 
 }
 
@@ -2876,7 +3557,8 @@ function updatePlayerAnimation(
   if(moving){
 
     playerAnimationTime +=
-      delta * 9;
+      delta *
+      9;
 
   }
 
@@ -2896,6 +3578,7 @@ function draw(){
     H
   );
 
+
   if(!me){
 
     drawBackground();
@@ -2904,40 +3587,49 @@ function draw(){
 
   }
 
+
   camX =
     me.x -
     W / 2;
+
 
   camY =
     me.y -
     H / 2;
 
+
   camX =
     Math.max(
       0,
       Math.min(
-        WORLD - W,
+        WORLD -
+        W,
         camX
       )
     );
+
 
   camY =
     Math.max(
       0,
       Math.min(
-        WORLD - H,
+        WORLD -
+        H,
         camY
       )
     );
+
 
   drawWorld();
 
 }
 
+
 function drawBackground(){
 
   ctx.fillStyle =
     "#17241a";
+
 
   ctx.fillRect(
     0,
@@ -2948,10 +3640,12 @@ function drawBackground(){
 
 }
 
+
 function drawWorld(){
 
   ctx.fillStyle =
     "#243b25";
+
 
   ctx.fillRect(
     0,
@@ -2962,15 +3656,19 @@ function drawWorld(){
 
 
   /*
-    CUADRÍCULA
+       CUADRÍCULA
   */
 
   ctx.strokeStyle =
     "rgba(255,255,255,.035)";
 
-  ctx.lineWidth = 1;
+  ctx.lineWidth =
+    1;
 
-  const grid = 80;
+
+  const grid =
+    80;
+
 
   for(
     let x =
@@ -2994,6 +3692,7 @@ function drawWorld(){
     ctx.stroke();
 
   }
+
 
   for(
     let y =
@@ -3031,9 +3730,11 @@ function drawWorld(){
       item.x -
       camX;
 
+
     const y =
       item.y -
       camY;
+
 
     if(
       x < -30 ||
@@ -3043,8 +3744,10 @@ function drawWorld(){
     )
       continue;
 
+
     ctx.font =
       "24px Arial";
+
 
     const icons = {
       ammo:"🔫",
@@ -3053,6 +3756,7 @@ function drawWorld(){
       rifle:"🔫",
       shotgun:"💥"
     };
+
 
     ctx.fillText(
       icons[item.type] ||
@@ -3076,9 +3780,11 @@ function drawWorld(){
       tree.x -
       camX;
 
+
     const y =
       tree.y -
       camY;
+
 
     if(
       x < -50 ||
@@ -3088,8 +3794,10 @@ function drawWorld(){
     )
       continue;
 
+
     ctx.fillStyle =
       "#633f25";
+
 
     ctx.fillRect(
       x - 5,
@@ -3098,8 +3806,10 @@ function drawWorld(){
       25
     );
 
+
     ctx.fillStyle =
       "#23733b";
+
 
     ctx.beginPath();
 
@@ -3113,8 +3823,10 @@ function drawWorld(){
 
     ctx.fill();
 
+
     ctx.fillStyle =
       "#35a64f";
+
 
     ctx.beginPath();
 
@@ -3143,14 +3855,17 @@ function drawWorld(){
       wall.x -
       camX;
 
+
     const y =
       wall.y -
       camY;
+
 
     ctx.fillStyle =
       wall.team === me.team
         ? "#398cffaa"
         : "#c88c55aa";
+
 
     ctx.fillRect(
       x,
@@ -3159,8 +3874,10 @@ function drawWorld(){
       wall.height
     );
 
+
     ctx.strokeStyle =
       "#ffffff55";
+
 
     ctx.strokeRect(
       x,
@@ -3183,26 +3900,36 @@ function drawWorld(){
     if(!p.alive)
       continue;
 
-    /*
-      Interpolación de otros jugadores.
-    */
 
     if(
-      typeof p.renderX !== "number"
+      typeof p.renderX !==
+      "number"
     ){
 
-      p.renderX = p.x;
-      p.renderY = p.y;
+      p.renderX =
+        p.x;
+
+      p.renderY =
+        p.y;
 
     }
 
+
     p.renderX +=
-      (p.x - p.renderX) *
+      (
+        p.x -
+        p.renderX
+      ) *
       0.18;
 
+
     p.renderY +=
-      (p.y - p.renderY) *
+      (
+        p.y -
+        p.renderY
+      ) *
       0.18;
+
 
     drawPlayer(
       p,
@@ -3216,10 +3943,6 @@ function drawWorld(){
 
   /*
        MI PERSONAJE
-
-       Importante:
-       usamos me.x / me.y directamente.
-       No se interpola contra el servidor.
   */
 
   if(me.alive){
@@ -3242,14 +3965,18 @@ function drawWorld(){
     storm.x -
     camX;
 
+
   const sy =
     storm.y -
     camY;
 
+
   ctx.save();
+
 
   ctx.fillStyle =
     "rgba(80,130,255,.16)";
+
 
   ctx.fillRect(
     0,
@@ -3258,10 +3985,13 @@ function drawWorld(){
     H
   );
 
+
   ctx.globalCompositeOperation =
     "destination-out";
 
+
   ctx.beginPath();
+
 
   ctx.arc(
     sx,
@@ -3271,16 +4001,23 @@ function drawWorld(){
     Math.PI * 2
   );
 
+
   ctx.fill();
 
+
   ctx.restore();
+
 
   ctx.strokeStyle =
     "rgba(110,180,255,.9)";
 
-  ctx.lineWidth = 5;
+
+  ctx.lineWidth =
+    5;
+
 
   ctx.beginPath();
+
 
   ctx.arc(
     sx,
@@ -3289,6 +4026,7 @@ function drawWorld(){
     0,
     Math.PI * 2
   );
+
 
   ctx.stroke();
 
@@ -3310,9 +4048,11 @@ function drawPlayer(
     renderX -
     camX;
 
+
   const y =
     renderY -
     camY;
+
 
   const color =
     isMe
@@ -3323,6 +4063,7 @@ function drawPlayer(
             ? "#42e67b"
             : "#ff4d5d"
         );
+
 
   if(
     x < -100 ||
@@ -3338,25 +4079,27 @@ function drawPlayer(
 
   ctx.save();
 
+
   ctx.translate(
     Math.round(x),
     Math.round(y)
   );
 
+
   ctx.imageSmoothingEnabled =
     false;
 
 
-  /*
-      ANIMACIÓN DEL JUGADOR
-  */
-
   const anim =
     getPlayerAnimation(
-      p.id || "me"
+      p.id ||
+      "me"
     );
 
-  let moving = false;
+
+  let moving =
+    false;
+
 
   if(isMe){
 
@@ -3365,8 +4108,10 @@ function drawPlayer(
       keys.a ||
       keys.s ||
       keys.d ||
-      Math.abs(mobileMove.x) > .05 ||
-      Math.abs(mobileMove.y) > .05;
+      Math.abs(mobileMove.x) >
+      .05 ||
+      Math.abs(mobileMove.y) >
+      .05;
 
   }else{
 
@@ -3377,16 +4122,24 @@ function drawPlayer(
 
       moving =
         Math.hypot(
-          renderX - anim.lastX,
-          renderY - anim.lastY
+          renderX -
+          anim.lastX,
+          renderY -
+          anim.lastY
         ) > .2;
 
     }
 
   }
 
-  anim.lastX = renderX;
-  anim.lastY = renderY;
+
+  anim.lastX =
+    renderX;
+
+
+  anim.lastY =
+    renderY;
+
 
   if(moving){
 
@@ -3395,16 +4148,25 @@ function drawPlayer(
 
   }
 
+
   const walk =
     moving
-      ? Math.sin(anim.phase) * 4
+      ? Math.sin(
+          anim.phase
+        ) * 4
       : 0;
 
+
   const legA =
-    Math.round(walk);
+    Math.round(
+      walk
+    );
+
 
   const legB =
-    Math.round(-walk);
+    Math.round(
+      -walk
+    );
 
 
   /*
@@ -3414,7 +4176,9 @@ function drawPlayer(
   ctx.fillStyle =
     "rgba(0,0,0,.35)";
 
+
   ctx.beginPath();
+
 
   ctx.ellipse(
     0,
@@ -3426,15 +4190,8 @@ function drawPlayer(
     Math.PI * 2
   );
 
+
   ctx.fill();
-
-
-  /*
-       PELO
-  */
-
-  const hair =
-    "#3b2419";
 
 
   /*
@@ -3444,12 +4201,14 @@ function drawPlayer(
   ctx.fillStyle =
     "#f1b27a";
 
+
   ctx.fillRect(
     -8,
     -25,
     16,
     15
   );
+
 
   /*
        OREJAS
@@ -3461,6 +4220,7 @@ function drawPlayer(
     3,
     6
   );
+
 
   ctx.fillRect(
     7,
@@ -3475,7 +4235,8 @@ function drawPlayer(
   */
 
   ctx.fillStyle =
-    hair;
+    "#3b2419";
+
 
   ctx.fillRect(
     -9,
@@ -3484,12 +4245,14 @@ function drawPlayer(
     6
   );
 
+
   ctx.fillRect(
     -7,
     -31,
     14,
     4
   );
+
 
   ctx.fillRect(
     -10,
@@ -3506,12 +4269,14 @@ function drawPlayer(
   ctx.fillStyle =
     "#111";
 
+
   ctx.fillRect(
     -5,
     -20,
     3,
     3
   );
+
 
   ctx.fillRect(
     2,
@@ -3527,6 +4292,7 @@ function drawPlayer(
 
   ctx.fillStyle =
     color;
+
 
   ctx.fillRect(
     -11,
@@ -3550,6 +4316,7 @@ function drawPlayer(
             : "#b72f3b"
         );
 
+
   ctx.fillRect(
     -9,
     -8,
@@ -3565,6 +4332,7 @@ function drawPlayer(
   ctx.fillStyle =
     "#27384c";
 
+
   ctx.fillRect(
     -4,
     -6,
@@ -3579,13 +4347,16 @@ function drawPlayer(
 
   ctx.save();
 
+
   ctx.rotate(
     (p.angle || 0) +
     Math.PI / 2
   );
 
+
   ctx.fillStyle =
     "#f1b27a";
+
 
   ctx.fillRect(
     -19,
@@ -3593,6 +4364,7 @@ function drawPlayer(
     7,
     18
   );
+
 
   ctx.restore();
 
@@ -3603,13 +4375,16 @@ function drawPlayer(
 
   ctx.save();
 
+
   ctx.rotate(
     (p.angle || 0) +
     Math.PI / 2
   );
 
+
   ctx.fillStyle =
     color;
+
 
   ctx.fillRect(
     11,
@@ -3618,8 +4393,10 @@ function drawPlayer(
     12
   );
 
+
   ctx.fillStyle =
     "#f1b27a";
+
 
   ctx.fillRect(
     11,
@@ -3627,6 +4404,7 @@ function drawPlayer(
     7,
     7
   );
+
 
   ctx.restore();
 
@@ -3638,12 +4416,14 @@ function drawPlayer(
   ctx.fillStyle =
     "#18202d";
 
+
   ctx.fillRect(
     -9,
     13,
     8,
     14 + legA
   );
+
 
   ctx.fillRect(
     1,
@@ -3660,12 +4440,14 @@ function drawPlayer(
   ctx.fillStyle =
     "#090c12";
 
+
   ctx.fillRect(
     -11,
     25 + legA,
     11,
     5
   );
+
 
   ctx.fillRect(
     0,
@@ -3679,7 +4461,9 @@ function drawPlayer(
        ARMA
   */
 
-  drawWeapon(p);
+  drawWeapon(
+    p
+  );
 
 
   /*
@@ -3689,11 +4473,14 @@ function drawPlayer(
   ctx.font =
     "bold 11px Arial";
 
+
   ctx.textAlign =
     "center";
 
+
   ctx.textBaseline =
     "alphabetic";
+
 
   const name =
     String(
@@ -3701,13 +4488,16 @@ function drawPlayer(
       "Jugador"
     );
 
+
   const nameWidth =
     ctx.measureText(
       name
     ).width;
 
+
   ctx.fillStyle =
     "rgba(0,0,0,.65)";
+
 
   ctx.fillRect(
     -nameWidth / 2 - 4,
@@ -3716,8 +4506,10 @@ function drawPlayer(
     13
   );
 
+
   ctx.fillStyle =
     "#fff";
+
 
   ctx.fillText(
     name,
@@ -3733,12 +4525,14 @@ function drawPlayer(
   ctx.fillStyle =
     "#101318";
 
+
   ctx.fillRect(
     -22,
     33,
     44,
     5
   );
+
 
   ctx.fillStyle =
     isMe
@@ -3750,6 +4544,7 @@ function drawPlayer(
             : "#ff4658"
         );
 
+
   ctx.fillRect(
     -22,
     33,
@@ -3758,7 +4553,8 @@ function drawPlayer(
         0,
         Math.min(
           1,
-          (p.health || 0) / 100
+          (p.health || 0) /
+          100
         )
       ),
     5
@@ -3766,7 +4562,7 @@ function drawPlayer(
 
 
   /*
-       BORDE DEL JUGADOR
+       BORDE
   */
 
   if(isMe){
@@ -3774,7 +4570,10 @@ function drawPlayer(
     ctx.strokeStyle =
       "rgba(0,198,255,.9)";
 
-    ctx.lineWidth = 2;
+
+    ctx.lineWidth =
+      2;
+
 
     ctx.strokeRect(
       -14,
@@ -3799,12 +4598,15 @@ function drawWeapon(p){
 
   ctx.save();
 
+
   ctx.rotate(
     p.angle || 0
   );
 
+
   ctx.fillStyle =
     "#171b22";
+
 
   ctx.fillRect(
     4,
@@ -3813,8 +4615,10 @@ function drawWeapon(p){
     7
   );
 
+
   ctx.fillStyle =
     "#343b47";
+
 
   ctx.fillRect(
     10,
@@ -3823,8 +4627,10 @@ function drawWeapon(p){
     4
   );
 
+
   ctx.fillStyle =
     "#090b0e";
+
 
   ctx.fillRect(
     27,
@@ -3833,8 +4639,10 @@ function drawWeapon(p){
     4
   );
 
+
   ctx.fillStyle =
     "#5b3a28";
+
 
   ctx.fillRect(
     8,
@@ -3843,8 +4651,10 @@ function drawWeapon(p){
     9
   );
 
+
   ctx.fillStyle =
     "#5e6673";
+
 
   ctx.fillRect(
     17,
@@ -3852,6 +4662,7 @@ function drawWeapon(p){
     5,
     3
   );
+
 
   ctx.restore();
 
@@ -3870,6 +4681,7 @@ function distance(a,b){
   );
 
 }
+
 
 function isMobileDevice(){
 
@@ -3896,11 +4708,15 @@ function playAgain(){
     .getElementById(
       "end-overlay"
     )
-    .classList.add("hidden");
+    .classList.add(
+      "hidden"
+    );
+
 
   send({
     type:"playAgain"
   });
+
 
   location.reload();
 
