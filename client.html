@@ -32,6 +32,10 @@ button{
   cursor:pointer;
 }
 
+.hidden{
+  display:none !important;
+}
+
 #game-container{
   position:fixed;
   inset:0;
@@ -282,8 +286,6 @@ button{
 #connection-status.connected{
   color:#36e67a;
 }
-
-/* OVERLAYS */
 
 .overlay{
   position:fixed;
@@ -623,122 +625,111 @@ button{
 
 <div id="game-container">
 
-  <canvas id="game" width="1100" height="700"></canvas>
+<canvas id="game" width="1100" height="700"></canvas>
 
-  <div id="ui">
+<div id="ui">
 
-    <div id="hud">
+<div id="hud">
 
-      <div class="panel hud-box">
+<div class="panel hud-box">
 
-        <div style="font-size:10px;color:#aaa">
-          VIDA
-        </div>
+<div style="font-size:10px;color:#aaa">
+VIDA
+</div>
 
-        <div id="health-bar-container">
-          <div id="health-bar"></div>
-        </div>
+<div id="health-bar-container">
+<div id="health-bar"></div>
+</div>
 
-        <div style="font-size:10px;color:#6ec6ff">
-          ESCUDO
-        </div>
+<div style="font-size:10px;color:#6ec6ff">
+ESCUDO
+</div>
 
-        <div id="shield-bar-container">
-          <div id="shield-bar"></div>
-        </div>
+<div id="shield-bar-container">
+<div id="shield-bar"></div>
+</div>
 
-      </div>
+</div>
 
-      <div class="panel hud-box" id="stats">
-        🪵 30 · 💀 0 · ⭐ 0
-      </div>
+<div class="panel hud-box" id="stats">
+🪵 30 · 💀 0 · ⭐ 0
+</div>
 
-    </div>
+</div>
 
-    <div id="top-center" class="panel">
+<div id="top-center" class="panel">
 
-      <div id="phaseText">
-        SALA DE ESPERA
-      </div>
+<div id="phaseText">
+SALA DE ESPERA
+</div>
 
-      <div id="storm">
-        🌪️ Zona segura
-      </div>
+<div id="storm">
+🌪️ Zona segura
+</div>
 
-    </div>
+</div>
 
-    <div id="player-list" class="panel">
+<div id="player-list" class="panel">
 
-      <div class="title">
-        EQUIPOS / JUGADORES
-      </div>
+<div class="title">
+EQUIPOS / JUGADORES
+</div>
 
-      <div id="plist-content"></div>
+<div id="plist-content"></div>
 
-    </div>
+</div>
 
-    <div id="chat-box"></div>
+<div id="chat-box"></div>
 
-    <div id="chat-input-container">
+<div id="chat-input-container">
 
-      <input
-        id="chat-input"
-        maxlength="100"
-        placeholder="Escribe y pulsa Enter..."
-      >
+<input
+id="chat-input"
+maxlength="100"
+placeholder="Escribe y pulsa Enter..."
+>
 
-    </div>
+</div>
 
-    <div id="hotbar">
+<div id="hotbar">
 
-      <div
-        class="slot active"
-        id="slot1"
-        onclick="setSlot(1)"
-      >
-        ⛏️
-        <small>1 Pico</small>
-      </div>
+<div
+class="slot active"
+id="slot1"
+onclick="setSlot(1)"
+>
+⛏️
+<small>1 Pico</small>
+</div>
 
-      <div
-        class="slot"
-        id="slot2"
-        onclick="setSlot(2)"
-      >
-        🔫
-        <small>2 Arma</small>
-        <b id="ammo">12/12</b>
-      </div>
+<div
+class="slot"
+id="slot2"
+onclick="setSlot(2)"
+>
+🔫
+<small>2 Arma</small>
+<b id="ammo">12/12</b>
+</div>
 
-    </div>
+</div>
 
-    <div id="action" class="hidden"></div>
+<div id="action" class="hidden"></div>
 
-    <div class="emotes">
+<div class="emotes">
 
-      <button onclick="doEmote('dance')">
-        💃
-      </button>
+<button onclick="doEmote('dance')">💃</button>
+<button onclick="doEmote('wave')">👋</button>
+<button onclick="doEmote('cheer')">🎉</button>
+<button onclick="doEmote('sit')">🪑</button>
 
-      <button onclick="doEmote('wave')">
-        👋
-      </button>
+</div>
 
-      <button onclick="doEmote('cheer')">
-        🎉
-      </button>
+<div id="connection-status">
+Desconectado
+</div>
 
-      <button onclick="doEmote('sit')">
-        🪑
-      </button>
-
-    </div>
-
-    <div id="connection-status">
-      Desconectado
-    </div>
-
-  </div>
+</div>
 </div>
 
 
@@ -748,78 +739,77 @@ button{
 
 <div id="mobile-controls">
 
-  <div id="mobile-mode-label">
-    📱 MODO MÓVIL
-  </div>
+<div id="mobile-mode-label">
+📱 MODO MÓVIL
+</div>
 
-  <div
-    id="move-stick"
-    class="mobile-joystick"
-  >
-    <div
-      id="move-knob"
-      class="stick-knob"
-    ></div>
-  </div>
+<div
+id="move-stick"
+class="mobile-joystick"
+>
+<div
+id="move-knob"
+class="stick-knob"
+></div>
+</div>
 
-  <div
-    id="aim-stick"
-    class="mobile-joystick"
-  >
-    <div
-      id="aim-knob"
-      class="stick-knob"
-    ></div>
-  </div>
+<div
+id="aim-stick"
+class="mobile-joystick"
+>
+<div
+id="aim-knob"
+class="stick-knob"
+></div>
+</div>
 
-  <button
-    id="mobile-reload"
-    class="mobile-btn"
-    title="Recargar"
-  >
-    🔄
-  </button>
+<button
+id="mobile-reload"
+class="mobile-btn"
+title="Recargar"
+>
+🔄
+</button>
 
-  <button
-    id="mobile-build"
-    class="mobile-btn"
-    title="Construir"
-  >
-    🧱
-  </button>
+<button
+id="mobile-build"
+class="mobile-btn"
+title="Construir"
+>
+🧱
+</button>
 
-  <div class="mobile-buttons">
+<div class="mobile-buttons">
 
-    <button
-      id="mobile-pickaxe"
-      class="mobile-btn"
-    >
-      ⛏️
-    </button>
+<button
+id="mobile-pickaxe"
+class="mobile-btn"
+>
+⛏️
+</button>
 
-    <button
-      id="mobile-weapon"
-      class="mobile-btn"
-    >
-      🔫
-    </button>
+<button
+id="mobile-weapon"
+class="mobile-btn"
+>
+🔫
+</button>
 
-    <button
-      id="mobile-pickup"
-      class="mobile-btn"
-    >
-      🎒
-    </button>
+<button
+id="mobile-pickup"
+class="mobile-btn"
+>
+🎒
+</button>
 
-    <button
-      id="mobile-fire"
-      class="mobile-btn fire"
-    >
-      🔥
-    </button>
+<button
+id="mobile-fire"
+class="mobile-btn fire"
+>
+🔥
+</button>
 
-  </div>
-
+</div>
 </div>
 
 
@@ -829,130 +819,129 @@ button{
 
 <div id="start-overlay" class="overlay">
 
-  <div class="card panel">
+<div class="card panel">
 
-    <h1>
-      PIXEL ROYALE 2.0
-    </h1>
+<h1>
+PIXEL ROYALE 2.0
+</h1>
 
-    <p>
-      Battle Royale Pixel · Equipos · Construcción · Loot
-    </p>
+<p>
+Battle Royale Pixel · Equipos · Construcción · Loot
+</p>
 
-    <input
-      id="name-input"
-      maxlength="16"
-      placeholder="Tu nombre"
-    >
+<input
+id="name-input"
+maxlength="16"
+placeholder="Tu nombre"
+>
 
-    <select id="team-mode">
+<select id="team-mode">
 
-      <option value="1">
-        Solo
-      </option>
+<option value="1">
+Solo
+</option>
 
-      <option value="2">
-        Equipo de 2
-      </option>
+<option value="2">
+Equipo de 2
+</option>
 
-      <option value="3">
-        Equipo de 3
-      </option>
+<option value="3">
+Equipo de 3
+</option>
 
-      <option value="4" selected>
-        Equipo de 4
-      </option>
+<option value="4" selected>
+Equipo de 4
+</option>
 
-    </select>
+</select>
 
-    <button
-      class="btn"
-      onclick="connect()"
-    >
-      ENTRAR
-    </button>
+<button
+class="btn"
+onclick="connect()"
+>
+ENTRAR
+</button>
 
-    <div id="lobby-status"></div>
+<div id="lobby-status"></div>
 
-    <div
-      id="party-panel"
-      class="party-box panel"
-      style="display:none"
-    >
+<div
+id="party-panel"
+class="party-box panel"
+style="display:none"
+>
 
-      <div style="font-weight:bold">
-        🤝 TU EQUIPO
-      </div>
+<div style="font-weight:bold">
+🤝 TU EQUIPO
+</div>
 
-      <div id="party-code">
-        -----
-      </div>
+<div id="party-code">
+-----
+</div>
 
-      <div
-        id="party-members"
-        class="party-members"
-      ></div>
+<div
+id="party-members"
+class="party-members"
+></div>
 
-      <button
-        class="btn green"
-        onclick="toggleReady()"
-      >
-        ✅ LISTO / NO LISTO
-      </button>
+<button
+class="btn green"
+onclick="toggleReady()"
+>
+✅ LISTO / NO LISTO
+</button>
 
-      <button
-        class="btn"
-        onclick="startMatch()"
-      >
-        🚀 INICIAR PARTIDA
-      </button>
+<button
+class="btn"
+onclick="startMatch()"
+>
+🚀 INICIAR PARTIDA
+</button>
 
-      <button
-        class="btn alt"
-        onclick="leaveParty()"
-      >
-        SALIR DEL EQUIPO
-      </button>
+<button
+class="btn alt"
+onclick="leaveParty()"
+>
+SALIR DEL EQUIPO
+</button>
 
-    </div>
+</div>
 
-    <div id="party-create">
+<div id="party-create">
 
-      <button
-        class="btn green"
-        onclick="createParty()"
-      >
-        ➕ CREAR EQUIPO
-      </button>
+<button
+class="btn green"
+onclick="createParty()"
+>
+➕ CREAR EQUIPO
+</button>
 
-      <input
-        id="party-code-input"
-        maxlength="5"
-        placeholder="Código de tu amigo"
-        style="text-transform:uppercase"
-      >
+<input
+id="party-code-input"
+maxlength="5"
+placeholder="Código de tu amigo"
+style="text-transform:uppercase"
+>
 
-      <button
-        class="btn alt"
-        onclick="joinParty()"
-      >
-        🔗 UNIRME CON CÓDIGO
-      </button>
+<button
+class="btn alt"
+onclick="joinParty()"
+>
+🔗 UNIRME CON CÓDIGO
+</button>
 
-    </div>
+</div>
 
-    <div class="hint">
+<div class="hint">
 
-      PC: WASD + ratón<br>
-      Móvil: joystick + botones táctiles<br><br>
+PC: WASD + ratón<br>
+Móvil: joystick + botones táctiles<br><br>
 
-      Para jugar con amigos: uno crea un equipo y comparte
-      el código de 5 letras/números.
+Para jugar con amigos: uno crea un equipo y comparte
+el código de 5 letras/números.
 
-    </div>
+</div>
 
-  </div>
-
+</div>
 </div>
 
 
@@ -960,20 +949,19 @@ button{
 
 <div id="count-overlay" class="overlay hidden">
 
-  <div class="card panel">
+<div class="card panel">
 
-    <h1 id="count-number">
-      5
-    </h1>
+<h1 id="count-number">
+5
+</h1>
 
-    <p>
-      Preparando partida...
-    </p>
+<p>
+Preparando partida...
+</p>
 
-    <div id="team-info"></div>
+<div id="team-info"></div>
 
-  </div>
-
+</div>
 </div>
 
 
@@ -981,36 +969,35 @@ button{
 
 <div id="end-overlay" class="overlay hidden">
 
-  <div class="card panel">
+<div class="card panel">
 
-    <h1 id="end-title">
-      VICTORIA
-    </h1>
+<h1 id="end-title">
+VICTORIA
+</h1>
 
-    <div
-      id="reward"
-      style="line-height:1.8;margin:15px 0"
-    ></div>
+<div
+id="reward"
+style="line-height:1.8;margin:15px 0"
+></div>
 
-    <button
-      class="btn"
-      onclick="playAgain()"
-    >
-      🔄 JUGAR OTRA VEZ
-    </button>
+<button
+class="btn"
+onclick="playAgain()"
+>
+🔄 JUGAR OTRA VEZ
+</button>
 
-  </div>
-
+</div>
 </div>
 
 
 <script>
 
 const canvas =
-  document.getElementById("game");
+document.getElementById("game");
 
 const ctx =
-  canvas.getContext("2d");
+canvas.getContext("2d");
 
 const W = canvas.width;
 const H = canvas.height;
@@ -1079,19 +1066,54 @@ let storm = {
 
 
 /* =================================
-       ANIMACIÓN DE PERSONAJES
+      MOVIMIENTO LOCAL SUAVE
    ================================= */
 
-let playerAnimationTime = 0;
+/*
+  Esta es la parte importante.
 
-function updatePlayerAnimation(moving){
+  me.x / me.y = posición visual/local.
+  serverPosition = última posición conocida por servidor.
 
-  if(moving){
-    playerAnimationTime += 0.18;
-  }else{
-    playerAnimationTime *= 0.85;
+  Ya no copiamos continuamente la posición
+  del servidor encima del jugador.
+*/
+
+let serverPosition = {
+  x:0,
+  y:0
+};
+
+let movementInitialized = false;
+
+let lastFrameTime = performance.now();
+
+const PLAYER_SPEED = 225; // píxeles por segundo
+
+const POSITION_SEND_RATE = 40;
+
+
+/* =================================
+       ANIMACIÓN
+   ================================= */
+
+let playerAnimations = new Map();
+
+function getPlayerAnimation(id){
+
+  if(!playerAnimations.has(id)){
+
+    playerAnimations.set(id,{
+      phase:Math.random() * Math.PI * 2,
+      moving:false,
+      lastX:null,
+      lastY:null,
+      lastTime:performance.now()
+    });
+
   }
 
+  return playerAnimations.get(id);
 }
 
 
@@ -1178,7 +1200,9 @@ function connect(){
     }
 
     handleMessage(data);
+
   };
+
 }
 
 function send(data){
@@ -1236,6 +1260,11 @@ function handleMessage(data){
   if(data.type === "joined"){
 
     me = data.player;
+
+    serverPosition.x = me.x;
+    serverPosition.y = me.y;
+
+    movementInitialized = true;
 
     document
       .getElementById("start-overlay")
@@ -1349,6 +1378,8 @@ function handleMessage(data){
 
     gameRunning = true;
 
+    lastFrameTime = performance.now();
+
     requestAnimationFrame(loop);
 
     return;
@@ -1372,6 +1403,7 @@ function handleMessage(data){
     if(data.storm)
       storm = data.storm;
 
+
     if(data.players){
 
       players.clear();
@@ -1380,15 +1412,20 @@ function handleMessage(data){
 
         if(p.id === myId){
 
-          /*
-             Guardamos el estado recibido del servidor,
-             pero el movimiento visual local se mantiene
-             para que el personaje responda rápido.
-          */
-
           if(!me){
+
             me = p;
+
+            serverPosition.x = p.x;
+            serverPosition.y = p.y;
+
+            movementInitialized = true;
+
           }else{
+
+            /*
+              Datos que SÍ vienen del servidor.
+            */
 
             me.health = p.health;
             me.shield = p.shield;
@@ -1402,16 +1439,29 @@ function handleMessage(data){
             me.name = p.name;
 
             /*
-              Si el servidor envía una posición muy
-              diferente, corregimos suavemente.
+              Guardamos la posición del servidor,
+              pero NO la copiamos directamente
+              sobre me.x / me.y.
             */
 
-            if(
+            serverPosition.x = p.x;
+            serverPosition.y = p.y;
+
+            /*
+              Solo hacemos una corrección fuerte
+              si estamos MUY lejos.
+
+              Esto evita que un pequeño retraso
+              del servidor haga volver al jugador.
+            */
+
+            const distanceFromServer =
               Math.hypot(
                 p.x - me.x,
                 p.y - me.y
-              ) > 180
-            ){
+              );
+
+            if(distanceFromServer > 250){
 
               me.x = p.x;
               me.y = p.y;
@@ -1427,6 +1477,32 @@ function handleMessage(data){
             p.xp || 0;
 
         }else{
+
+          /*
+            Jugadores enemigos/aliados.
+            Los guardamos para interpolarlos
+            visualmente.
+          */
+
+          const old =
+            players.get(p.id);
+
+          if(old){
+
+            p.renderX =
+              old.renderX ??
+              old.x;
+
+            p.renderY =
+              old.renderY ??
+              old.y;
+
+          }else{
+
+            p.renderX = p.x;
+            p.renderY = p.y;
+
+          }
 
           players.set(
             p.id,
@@ -1874,32 +1950,32 @@ function addChat(
 }
 
 document
-  .getElementById(
-    "chat-input"
-  )
-  .addEventListener(
-    "keydown",
-    e => {
+.getElementById(
+  "chat-input"
+)
+.addEventListener(
+  "keydown",
+  e => {
 
-      if(e.key !== "Enter")
-        return;
+    if(e.key !== "Enter")
+      return;
 
-      const value =
-        e.target.value.trim();
+    const value =
+      e.target.value.trim();
 
-      if(value){
+    if(value){
 
-        send({
-          type:"chat",
-          message:value
-        });
-
-      }
-
-      e.target.value = "";
+      send({
+        type:"chat",
+        message:value
+      });
 
     }
-  );
+
+    e.target.value = "";
+
+  }
+);
 
 
 /* ==========================
@@ -1932,6 +2008,8 @@ window.addEventListener(
     ){
 
       keys[key] = true;
+
+      e.preventDefault();
 
     }
 
@@ -2026,6 +2104,11 @@ window.addEventListener(
       mouse.down = false;
 
   }
+);
+
+canvas.addEventListener(
+  "contextmenu",
+  e => e.preventDefault()
 );
 
 
@@ -2389,17 +2472,11 @@ setupJoystick(
     mobileMove.x = x;
     mobileMove.y = y;
 
-    keys.w =
-      y < -0.2;
-
-    keys.s =
-      y > 0.2;
-
-    keys.a =
-      x < -0.2;
-
-    keys.d =
-      x > 0.2;
+    /*
+      Guardamos directamente el joystick.
+      El movimiento ya no depende de
+      convertirlo a WASD.
+    */
 
   }
 );
@@ -2563,7 +2640,69 @@ mobileButton(
 
 
 /* ==========================
-          GAME LOOP
+      MOVIMIENTO
+   ========================== */
+
+function getMovementDirection(){
+
+  let dx = 0;
+  let dy = 0;
+
+  /*
+    En móvil usamos el joystick directamente.
+  */
+
+  if(
+    isMobileDevice() &&
+    (
+      Math.abs(mobileMove.x) > 0.05 ||
+      Math.abs(mobileMove.y) > 0.05
+    )
+  ){
+
+    dx = mobileMove.x;
+    dy = mobileMove.y;
+
+  }else{
+
+    /*
+      PC: WASD.
+    */
+
+    dx =
+      (keys.d ? 1 : 0) -
+      (keys.a ? 1 : 0);
+
+    dy =
+      (keys.s ? 1 : 0) -
+      (keys.w ? 1 : 0);
+
+  }
+
+  const length =
+    Math.hypot(
+      dx,
+      dy
+    );
+
+  if(length > 1){
+
+    dx /= length;
+    dy /= length;
+
+  }
+
+  return {
+    x:dx,
+    y:dy,
+    moving:length > 0.05
+  };
+
+}
+
+
+/* ==========================
+       GAME LOOP
    ========================== */
 
 function loop(){
@@ -2573,13 +2712,39 @@ function loop(){
 
   if(!me){
 
-    requestAnimationFrame(
-      loop
-    );
+    requestAnimationFrame(loop);
 
     return;
 
   }
+
+  const now =
+    performance.now();
+
+  /*
+    Delta time.
+
+    Esto hace que la velocidad sea igual
+    aunque el dispositivo tenga 30, 60
+    o 120 FPS.
+  */
+
+  let delta =
+    (now - lastFrameTime) / 1000;
+
+  lastFrameTime = now;
+
+  /*
+    Evita saltos enormes si la pestaña
+    estuvo congelada.
+  */
+
+  delta =
+    Math.min(
+      delta,
+      0.05
+    );
+
 
   let moving = false;
 
@@ -2588,52 +2753,29 @@ function loop(){
     phase === "playing"
   ){
 
-    let dx =
-      (keys.d ? 1 : 0) -
-      (keys.a ? 1 : 0);
+    const movement =
+      getMovementDirection();
 
-    let dy =
-      (keys.s ? 1 : 0) -
-      (keys.w ? 1 : 0);
-
-    const length =
-      Math.hypot(
-        dx,
-        dy
-      );
-
-    if(length > 0){
-
-      dx /= length;
-      dy /= length;
+    if(movement.moving){
 
       me.x +=
-        dx * 3.7;
+        movement.x *
+        PLAYER_SPEED *
+        delta;
 
       me.y +=
-        dy * 3.7;
+        movement.y *
+        PLAYER_SPEED *
+        delta;
 
       moving = true;
 
-      /*
-        Si el jugador se mueve con WASD,
-        también orientamos el cuerpo hacia
-        la dirección de movimiento si no
-        estamos usando apuntado móvil.
-      */
-
-      if(
-        !isMobileDevice() ||
-        !mobileAim.active
-      ){
-
-        /*
-          El ratón sigue controlando el arma.
-        */
-
-      }
-
     }
+
+
+    /*
+      Límites del mapa.
+    */
 
     me.x =
       Math.max(
@@ -2655,7 +2797,7 @@ function loop(){
 
 
     /*
-      Ángulo del arma.
+      Apuntado.
     */
 
     if(
@@ -2671,25 +2813,32 @@ function loop(){
 
     }
 
+
+    /*
+      Disparo.
+    */
+
     if(mouse.down){
 
       shoot();
 
     }
 
-    updatePlayerAnimation(
-      moving
-    );
 
+    /*
+      Sincronización con servidor.
+
+      Mandamos la posición cada 40 ms,
+      pero NO esperamos al servidor
+      para seguir caminando.
+    */
 
     if(
-      Date.now() -
-      lastUpdate >
-      60
+      now - lastUpdate >
+      POSITION_SEND_RATE
     ){
 
-      lastUpdate =
-        Date.now();
+      lastUpdate = now;
 
       send({
         type:"update",
@@ -2702,11 +2851,34 @@ function loop(){
 
   }
 
+
+  updatePlayerAnimation(
+    moving,
+    delta
+  );
+
   draw();
 
-  requestAnimationFrame(
-    loop
-  );
+  requestAnimationFrame(loop);
+
+}
+
+
+/* ==========================
+       ANIMACIÓN
+   ========================== */
+
+function updatePlayerAnimation(
+  moving,
+  delta
+){
+
+  if(moving){
+
+    playerAnimationTime +=
+      delta * 9;
+
+  }
 
 }
 
@@ -3001,7 +3173,7 @@ function drawWorld(){
 
 
   /*
-       JUGADORES
+       OTROS JUGADORES
   */
 
   for(
@@ -3011,18 +3183,52 @@ function drawWorld(){
     if(!p.alive)
       continue;
 
+    /*
+      Interpolación de otros jugadores.
+    */
+
+    if(
+      typeof p.renderX !== "number"
+    ){
+
+      p.renderX = p.x;
+      p.renderY = p.y;
+
+    }
+
+    p.renderX +=
+      (p.x - p.renderX) *
+      0.18;
+
+    p.renderY +=
+      (p.y - p.renderY) *
+      0.18;
+
     drawPlayer(
       p,
-      false
+      false,
+      p.renderX,
+      p.renderY
     );
 
   }
+
+
+  /*
+       MI PERSONAJE
+
+       Importante:
+       usamos me.x / me.y directamente.
+       No se interpola contra el servidor.
+  */
 
   if(me.alive){
 
     drawPlayer(
       me,
-      true
+      true,
+      me.x,
+      me.y
     );
 
   }
@@ -3090,32 +3296,33 @@ function drawWorld(){
 
 
 /* =====================================================
-            PERSONAJE 2D PIXEL ART
+           PERSONAJE 2D PIXEL ART
    ===================================================== */
 
-function drawPlayer(p,isMe){
+function drawPlayer(
+  p,
+  isMe,
+  renderX = p.x,
+  renderY = p.y
+){
 
   const x =
-    p.x -
+    renderX -
     camX;
 
   const y =
-    p.y -
+    renderY -
     camY;
 
   const color =
     isMe
       ? "#00c6ff"
-      : (
-        p.team === me.team
-          ? "#42e67b"
-          : "#ff4d5d"
-      );
-
-  /*
-    Si está muy lejos, no dibujamos
-    para ahorrar rendimiento.
-  */
+      :
+        (
+          p.team === me.team
+            ? "#42e67b"
+            : "#ff4d5d"
+        );
 
   if(
     x < -100 ||
@@ -3129,10 +3336,6 @@ function drawPlayer(p,isMe){
   }
 
 
-  /*
-       SOMBRA
-  */
-
   ctx.save();
 
   ctx.translate(
@@ -3142,6 +3345,71 @@ function drawPlayer(p,isMe){
 
   ctx.imageSmoothingEnabled =
     false;
+
+
+  /*
+      ANIMACIÓN DEL JUGADOR
+  */
+
+  const anim =
+    getPlayerAnimation(
+      p.id || "me"
+    );
+
+  let moving = false;
+
+  if(isMe){
+
+    moving =
+      keys.w ||
+      keys.a ||
+      keys.s ||
+      keys.d ||
+      Math.abs(mobileMove.x) > .05 ||
+      Math.abs(mobileMove.y) > .05;
+
+  }else{
+
+    if(
+      anim.lastX !== null &&
+      anim.lastY !== null
+    ){
+
+      moving =
+        Math.hypot(
+          renderX - anim.lastX,
+          renderY - anim.lastY
+        ) > .2;
+
+    }
+
+  }
+
+  anim.lastX = renderX;
+  anim.lastY = renderY;
+
+  if(moving){
+
+    anim.phase +=
+      0.25;
+
+  }
+
+  const walk =
+    moving
+      ? Math.sin(anim.phase) * 4
+      : 0;
+
+  const legA =
+    Math.round(walk);
+
+  const legB =
+    Math.round(-walk);
+
+
+  /*
+       SOMBRA
+  */
 
   ctx.fillStyle =
     "rgba(0,0,0,.35)";
@@ -3162,42 +3430,12 @@ function drawPlayer(p,isMe){
 
 
   /*
-       ANIMACIÓN
-  */
-
-  const moving =
-    p === me
-      ? (
-        keys.w ||
-        keys.a ||
-        keys.s ||
-        keys.d
-      )
-      : true;
-
-  const walk =
-    moving
-      ? Math.sin(
-          playerAnimationTime * 4 +
-          (p.id ? hashString(p.id) : 0)
-        )
-      : 0;
-
-  const legA =
-    Math.round(
-      walk * 4
-    );
-
-  const legB =
-    -legA;
-
-
-  /*
-       COLOR DE PELO
+       PELO
   */
 
   const hair =
     "#3b2419";
+
 
   /*
        CABEZA
@@ -3214,7 +3452,7 @@ function drawPlayer(p,isMe){
   );
 
   /*
-       OREJA
+       OREJAS
   */
 
   ctx.fillRect(
@@ -3305,11 +3543,12 @@ function drawPlayer(p,isMe){
   ctx.fillStyle =
     isMe
       ? "#0788b3"
-      : (
-        p.team === me.team
-          ? "#24964e"
-          : "#b72f3b"
-      );
+      :
+        (
+          p.team === me.team
+            ? "#24964e"
+            : "#b72f3b"
+        );
 
   ctx.fillRect(
     -9,
@@ -3320,7 +3559,7 @@ function drawPlayer(p,isMe){
 
 
   /*
-       CAMISETA CENTRAL
+       CAMISETA
   */
 
   ctx.fillStyle =
@@ -3341,7 +3580,8 @@ function drawPlayer(p,isMe){
   ctx.save();
 
   ctx.rotate(
-    p.angle + Math.PI / 2
+    (p.angle || 0) +
+    Math.PI / 2
   );
 
   ctx.fillStyle =
@@ -3364,7 +3604,8 @@ function drawPlayer(p,isMe){
   ctx.save();
 
   ctx.rotate(
-    p.angle + Math.PI / 2
+    (p.angle || 0) +
+    Math.PI / 2
   );
 
   ctx.fillStyle =
@@ -3438,9 +3679,7 @@ function drawPlayer(p,isMe){
        ARMA
   */
 
-  drawWeapon(
-    p
-  );
+  drawWeapon(p);
 
 
   /*
@@ -3456,15 +3695,16 @@ function drawPlayer(p,isMe){
   ctx.textBaseline =
     "alphabetic";
 
-  /*
-       Fondo pequeño para el nombre
-  */
-
   const name =
-    String(p.name || "Jugador");
+    String(
+      p.name ||
+      "Jugador"
+    );
 
   const nameWidth =
-    ctx.measureText(name).width;
+    ctx.measureText(
+      name
+    ).width;
 
   ctx.fillStyle =
     "rgba(0,0,0,.65)";
@@ -3487,7 +3727,7 @@ function drawPlayer(p,isMe){
 
 
   /*
-       BARRA DE VIDA
+       VIDA
   */
 
   ctx.fillStyle =
@@ -3503,11 +3743,12 @@ function drawPlayer(p,isMe){
   ctx.fillStyle =
     isMe
       ? "#35e36e"
-      : (
-        p.team === me.team
-          ? "#35e36e"
-          : "#ff4658"
-      );
+      :
+        (
+          p.team === me.team
+            ? "#35e36e"
+            : "#ff4658"
+        );
 
   ctx.fillRect(
     -22,
@@ -3525,7 +3766,7 @@ function drawPlayer(p,isMe){
 
 
   /*
-       BORDE AZUL PARA EL JUGADOR
+       BORDE DEL JUGADOR
   */
 
   if(isMe){
@@ -3551,25 +3792,16 @@ function drawPlayer(p,isMe){
 
 
 /* ==========================
-          ARMA 2D
+          ARMA
    ========================== */
 
 function drawWeapon(p){
 
   ctx.save();
 
-  /*
-     Colocamos el arma en el lado
-     derecho del personaje.
-  */
-
   ctx.rotate(
     p.angle || 0
   );
-
-  /*
-       Cuerpo del arma
-  */
 
   ctx.fillStyle =
     "#171b22";
@@ -3581,10 +3813,6 @@ function drawWeapon(p){
     7
   );
 
-  /*
-       Parte superior
-  */
-
   ctx.fillStyle =
     "#343b47";
 
@@ -3594,10 +3822,6 @@ function drawWeapon(p){
     14,
     4
   );
-
-  /*
-       Cañón
-  */
 
   ctx.fillStyle =
     "#090b0e";
@@ -3609,10 +3833,6 @@ function drawWeapon(p){
     4
   );
 
-  /*
-       Empuñadura
-  */
-
   ctx.fillStyle =
     "#5b3a28";
 
@@ -3622,10 +3842,6 @@ function drawWeapon(p){
     7,
     9
   );
-
-  /*
-       Mira
-  */
 
   ctx.fillStyle =
     "#5e6673";
@@ -3638,38 +3854,6 @@ function drawWeapon(p){
   );
 
   ctx.restore();
-
-}
-
-
-/* ==========================
-      HASH PARA ANIMACIONES
-   ========================== */
-
-function hashString(str){
-
-  let hash = 0;
-
-  for(
-    let i = 0;
-    i < str.length;
-    i++
-  ){
-
-    hash =
-      (
-        (
-          hash << 5
-        ) -
-        hash
-      ) +
-      str.charCodeAt(i);
-
-    hash |= 0;
-
-  }
-
-  return Math.abs(hash) / 1000;
 
 }
 
