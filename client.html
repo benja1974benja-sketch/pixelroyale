@@ -502,9 +502,8 @@ button{
   font-size:10px;
 }
 
-/* MOSTRAR AUTOMÁTICAMENTE EN MÓVIL */
-
 @media (max-width:900px), (pointer:coarse){
+
   #mobile-controls{
     display:block;
   }
@@ -574,9 +573,8 @@ button{
   }
 }
 
-/* Pantallas muy pequeñas */
-
 @media (max-width:520px){
+
   .mobile-joystick{
     width:110px;
     height:110px;
@@ -624,68 +622,116 @@ button{
 <body>
 
 <div id="game-container">
+
   <canvas id="game" width="1100" height="700"></canvas>
 
   <div id="ui">
 
     <div id="hud">
+
       <div class="panel hud-box">
-        <div style="font-size:10px;color:#aaa">VIDA</div>
+
+        <div style="font-size:10px;color:#aaa">
+          VIDA
+        </div>
+
         <div id="health-bar-container">
           <div id="health-bar"></div>
         </div>
 
-        <div style="font-size:10px;color:#6ec6ff">ESCUDO</div>
+        <div style="font-size:10px;color:#6ec6ff">
+          ESCUDO
+        </div>
+
         <div id="shield-bar-container">
           <div id="shield-bar"></div>
         </div>
+
       </div>
 
       <div class="panel hud-box" id="stats">
         🪵 30 · 💀 0 · ⭐ 0
       </div>
+
     </div>
 
     <div id="top-center" class="panel">
-      <div id="phaseText">SALA DE ESPERA</div>
-      <div id="storm">🌪️ Zona segura</div>
+
+      <div id="phaseText">
+        SALA DE ESPERA
+      </div>
+
+      <div id="storm">
+        🌪️ Zona segura
+      </div>
+
     </div>
 
     <div id="player-list" class="panel">
-      <div class="title">EQUIPOS / JUGADORES</div>
+
+      <div class="title">
+        EQUIPOS / JUGADORES
+      </div>
+
       <div id="plist-content"></div>
+
     </div>
 
     <div id="chat-box"></div>
 
     <div id="chat-input-container">
+
       <input
         id="chat-input"
         maxlength="100"
         placeholder="Escribe y pulsa Enter..."
       >
+
     </div>
 
     <div id="hotbar">
-      <div class="slot active" id="slot1" onclick="setSlot(1)">
+
+      <div
+        class="slot active"
+        id="slot1"
+        onclick="setSlot(1)"
+      >
         ⛏️
         <small>1 Pico</small>
       </div>
 
-      <div class="slot" id="slot2" onclick="setSlot(2)">
+      <div
+        class="slot"
+        id="slot2"
+        onclick="setSlot(2)"
+      >
         🔫
         <small>2 Arma</small>
         <b id="ammo">12/12</b>
       </div>
+
     </div>
 
     <div id="action" class="hidden"></div>
 
     <div class="emotes">
-      <button onclick="doEmote('dance')">💃</button>
-      <button onclick="doEmote('wave')">👋</button>
-      <button onclick="doEmote('cheer')">🎉</button>
-      <button onclick="doEmote('sit')">🪑</button>
+
+      <button onclick="doEmote('dance')">
+        💃
+      </button>
+
+      <button onclick="doEmote('wave')">
+        👋
+      </button>
+
+      <button onclick="doEmote('cheer')">
+        🎉
+      </button>
+
+      <button onclick="doEmote('sit')">
+        🪑
+      </button>
+
     </div>
 
     <div id="connection-status">
@@ -710,14 +756,20 @@ button{
     id="move-stick"
     class="mobile-joystick"
   >
-    <div id="move-knob" class="stick-knob"></div>
+    <div
+      id="move-knob"
+      class="stick-knob"
+    ></div>
   </div>
 
   <div
     id="aim-stick"
     class="mobile-joystick"
   >
-    <div id="aim-knob" class="stick-knob"></div>
+    <div
+      id="aim-knob"
+      class="stick-knob"
+    ></div>
   </div>
 
   <button
@@ -767,6 +819,7 @@ button{
     </button>
 
   </div>
+
 </div>
 
 
@@ -778,7 +831,9 @@ button{
 
   <div class="card panel">
 
-    <h1>PIXEL ROYALE 2.0</h1>
+    <h1>
+      PIXEL ROYALE 2.0
+    </h1>
 
     <p>
       Battle Royale Pixel · Equipos · Construcción · Loot
@@ -791,10 +846,23 @@ button{
     >
 
     <select id="team-mode">
-      <option value="1">Solo</option>
-      <option value="2">Equipo de 2</option>
-      <option value="3">Equipo de 3</option>
-      <option value="4" selected>Equipo de 4</option>
+
+      <option value="1">
+        Solo
+      </option>
+
+      <option value="2">
+        Equipo de 2
+      </option>
+
+      <option value="3">
+        Equipo de 3
+      </option>
+
+      <option value="4" selected>
+        Equipo de 4
+      </option>
+
     </select>
 
     <button
@@ -806,7 +874,11 @@ button{
 
     <div id="lobby-status"></div>
 
-    <div id="party-panel" class="party-box panel" style="display:none">
+    <div
+      id="party-panel"
+      class="party-box panel"
+      style="display:none"
+    >
 
       <div style="font-weight:bold">
         🤝 TU EQUIPO
@@ -870,30 +942,45 @@ button{
     </div>
 
     <div class="hint">
+
       PC: WASD + ratón<br>
       Móvil: joystick + botones táctiles<br><br>
+
       Para jugar con amigos: uno crea un equipo y comparte
       el código de 5 letras/números.
+
     </div>
 
   </div>
+
 </div>
 
 
 <!-- CUENTA ATRÁS -->
 
 <div id="count-overlay" class="overlay hidden">
+
   <div class="card panel">
-    <h1 id="count-number">5</h1>
-    <p>Preparando partida...</p>
+
+    <h1 id="count-number">
+      5
+    </h1>
+
+    <p>
+      Preparando partida...
+    </p>
+
     <div id="team-info"></div>
+
   </div>
+
 </div>
 
 
 <!-- FINAL -->
 
 <div id="end-overlay" class="overlay hidden">
+
   <div class="card panel">
 
     <h1 id="end-title">
@@ -913,12 +1000,17 @@ button{
     </button>
 
   </div>
+
 </div>
 
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+
+const canvas =
+  document.getElementById("game");
+
+const ctx =
+  canvas.getContext("2d");
 
 const W = canvas.width;
 const H = canvas.height;
@@ -946,8 +1038,8 @@ let keys = {
 };
 
 let mouse = {
-  x: W / 2,
-  y: H / 2,
+  x:W / 2,
+  y:H / 2,
   down:false
 };
 
@@ -986,6 +1078,23 @@ let storm = {
 };
 
 
+/* =================================
+       ANIMACIÓN DE PERSONAJES
+   ================================= */
+
+let playerAnimationTime = 0;
+
+function updatePlayerAnimation(moving){
+
+  if(moving){
+    playerAnimationTime += 0.18;
+  }else{
+    playerAnimationTime *= 0.85;
+  }
+
+}
+
+
 /* ==========================
        CONEXIÓN
    ========================== */
@@ -993,11 +1102,16 @@ let storm = {
 function connect(){
 
   const name =
-    document.getElementById("name-input").value.trim()
+    document
+      .getElementById("name-input")
+      .value
+      .trim()
     || "Jugador";
 
   const teamMode =
-    Number(document.getElementById("team-mode").value) || 4;
+    Number(
+      document.getElementById("team-mode").value
+    ) || 4;
 
   const protocol =
     location.protocol === "https:"
@@ -1007,9 +1121,10 @@ function connect(){
   const host =
     location.host || "localhost:3000";
 
-  ws = new WebSocket(
-    protocol + "//" + host
-  );
+  ws =
+    new WebSocket(
+      protocol + "//" + host
+    );
 
   ws.onopen = () => {
 
@@ -1052,9 +1167,14 @@ function connect(){
     let data;
 
     try{
-      data = JSON.parse(event.data);
+
+      data =
+        JSON.parse(event.data);
+
     }catch{
+
       return;
+
     }
 
     handleMessage(data);
@@ -1067,8 +1187,13 @@ function send(data){
     ws &&
     ws.readyState === WebSocket.OPEN
   ){
-    ws.send(JSON.stringify(data));
+
+    ws.send(
+      JSON.stringify(data)
+    );
+
   }
+
 }
 
 function setConnection(ok){
@@ -1079,12 +1204,15 @@ function setConnection(ok){
     );
 
   el.textContent =
-    ok ? "Conectado" : "Desconectado";
+    ok
+      ? "Conectado"
+      : "Desconectado";
 
   el.classList.toggle(
     "connected",
     ok
   );
+
 }
 
 
@@ -1097,7 +1225,9 @@ function handleMessage(data){
   if(data.type === "welcome"){
 
     myId = data.id;
-    WORLD = data.world || 2400;
+
+    WORLD =
+      data.world || 2400;
 
     return;
   }
@@ -1107,9 +1237,9 @@ function handleMessage(data){
 
     me = data.player;
 
-    document.getElementById(
-      "start-overlay"
-    ).classList.remove("hidden");
+    document
+      .getElementById("start-overlay")
+      .classList.remove("hidden");
 
     return;
   }
@@ -1121,15 +1251,18 @@ function handleMessage(data){
 
     document.getElementById(
       "party-code"
-    ).textContent = partyCode;
+    ).textContent =
+      partyCode;
 
     document.getElementById(
       "party-panel"
-    ).style.display = "block";
+    ).style.display =
+      "block";
 
     document.getElementById(
       "party-create"
-    ).style.display = "none";
+    ).style.display =
+      "none";
 
     document.getElementById(
       "lobby-status"
@@ -1171,17 +1304,18 @@ function handleMessage(data){
 
   if(data.type === "matchStarting"){
 
-    document.getElementById(
-      "start-overlay"
-    ).classList.add("hidden");
+    document
+      .getElementById("start-overlay")
+      .classList.add("hidden");
 
-    document.getElementById(
-      "count-overlay"
-    ).classList.remove("hidden");
+    document
+      .getElementById("count-overlay")
+      .classList.remove("hidden");
 
     document.getElementById(
       "count-number"
-    ).textContent = data.seconds;
+    ).textContent =
+      data.seconds;
 
     return;
   }
@@ -1191,7 +1325,8 @@ function handleMessage(data){
 
     document.getElementById(
       "count-number"
-    ).textContent = data.seconds;
+    ).textContent =
+      data.seconds;
 
     return;
   }
@@ -1199,14 +1334,18 @@ function handleMessage(data){
 
   if(data.type === "matchStart"){
 
-    WORLD = data.world || WORLD;
-    storm = data.storm || storm;
+    WORLD =
+      data.world || WORLD;
 
-    phase = "playing";
+    storm =
+      data.storm || storm;
 
-    document.getElementById(
-      "count-overlay"
-    ).classList.add("hidden");
+    phase =
+      "playing";
+
+    document
+      .getElementById("count-overlay")
+      .classList.add("hidden");
 
     gameRunning = true;
 
@@ -1218,7 +1357,8 @@ function handleMessage(data){
 
   if(data.type === "state"){
 
-    phase = data.phase;
+    phase =
+      data.phase;
 
     if(data.trees)
       trees = data.trees;
@@ -1240,16 +1380,63 @@ function handleMessage(data){
 
         if(p.id === myId){
 
-          me = p;
+          /*
+             Guardamos el estado recibido del servidor,
+             pero el movimiento visual local se mantiene
+             para que el personaje responda rápido.
+          */
 
-          myKills = p.kills || 0;
-          myXP = p.xp || 0;
+          if(!me){
+            me = p;
+          }else{
+
+            me.health = p.health;
+            me.shield = p.shield;
+            me.ammo = p.ammo;
+            me.maxAmmo = p.maxAmmo;
+            me.materials = p.materials;
+            me.kills = p.kills;
+            me.xp = p.xp;
+            me.team = p.team;
+            me.alive = p.alive;
+            me.name = p.name;
+
+            /*
+              Si el servidor envía una posición muy
+              diferente, corregimos suavemente.
+            */
+
+            if(
+              Math.hypot(
+                p.x - me.x,
+                p.y - me.y
+              ) > 180
+            ){
+
+              me.x = p.x;
+              me.y = p.y;
+
+            }
+
+          }
+
+          myKills =
+            p.kills || 0;
+
+          myXP =
+            p.xp || 0;
 
         }else{
 
-          players.set(p.id,p);
+          players.set(
+            p.id,
+            p
+          );
+
         }
+
       }
+
     }
 
     updateHUD();
@@ -1279,6 +1466,7 @@ function handleMessage(data){
   if(data.type === "matchEnd"){
 
     gameRunning = false;
+
     phase = "ended";
 
     const result =
@@ -1287,7 +1475,8 @@ function handleMessage(data){
       );
 
     const victory =
-      result && result.victory;
+      result &&
+      result.victory;
 
     document.getElementById(
       "end-title"
@@ -1306,9 +1495,9 @@ function handleMessage(data){
       🪙 Monedas: ${result?.coins || 0}
       `;
 
-    document.getElementById(
-      "end-overlay"
-    ).classList.remove("hidden");
+    document
+      .getElementById("end-overlay")
+      .classList.remove("hidden");
 
     return;
   }
@@ -1323,6 +1512,7 @@ function handleMessage(data){
 
     return;
   }
+
 }
 
 
@@ -1332,7 +1522,8 @@ function handleMessage(data){
 
 function createParty(){
 
-  if(!ws) return;
+  if(!ws)
+    return;
 
   const size =
     Number(
@@ -1355,6 +1546,7 @@ function createParty(){
     type:"createParty",
     size
   });
+
 }
 
 function joinParty(){
@@ -1364,7 +1556,10 @@ function joinParty(){
       "party-code-input"
     ).value
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g,"")
+    .replace(
+      /[^A-Z0-9]/g,
+      ""
+    )
     .slice(0,5);
 
   if(code.length !== 5){
@@ -1381,6 +1576,7 @@ function joinParty(){
     type:"joinParty",
     code
   });
+
 }
 
 function leaveParty(){
@@ -1393,11 +1589,13 @@ function leaveParty(){
 
   document.getElementById(
     "party-panel"
-  ).style.display = "none";
+  ).style.display =
+    "none";
 
   document.getElementById(
     "party-create"
-  ).style.display = "block";
+  ).style.display =
+    "block";
 }
 
 function toggleReady(){
@@ -1405,6 +1603,7 @@ function toggleReady(){
   send({
     type:"ready"
   });
+
 }
 
 function startMatch(){
@@ -1412,11 +1611,13 @@ function startMatch(){
   send({
     type:"startMatch"
   });
+
 }
 
 function updateLobby(data){
 
-  if(!data.parties) return;
+  if(!data.parties)
+    return;
 
   let myParty = null;
 
@@ -1430,20 +1631,25 @@ function updateLobby(data){
 
       myParty = party;
       break;
+
     }
+
   }
 
   if(myParty){
 
-    partyCode = myParty.code;
+    partyCode =
+      myParty.code;
 
     document.getElementById(
       "party-panel"
-    ).style.display = "block";
+    ).style.display =
+      "block";
 
     document.getElementById(
       "party-create"
-    ).style.display = "none";
+    ).style.display =
+      "none";
 
     document.getElementById(
       "party-code"
@@ -1457,25 +1663,36 @@ function updateLobby(data){
 
     box.innerHTML = "";
 
-    for(const member of myParty.members){
+    for(
+      const member of myParty.members
+    ){
 
       const div =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
-      div.className = "member";
+      div.className =
+        "member";
 
       div.textContent =
-        (member.id === myParty.leaderId
-          ? "👑 "
-          : "👤 ")
+        (
+          member.id ===
+          myParty.leaderId
+            ? "👑 "
+            : "👤 "
+        )
         +
         member.name
         +
-        (member.ready
-          ? "  ✅"
-          : "  ⏳");
+        (
+          member.ready
+            ? "  ✅"
+            : "  ⏳"
+        );
 
       box.appendChild(div);
+
     }
 
   }else{
@@ -1485,6 +1702,7 @@ function updateLobby(data){
   }
 
   updateList();
+
 }
 
 
@@ -1494,14 +1712,18 @@ function updateLobby(data){
 
 function updateHUD(){
 
-  if(!me) return;
+  if(!me)
+    return;
 
   document.getElementById(
     "health-bar"
   ).style.width =
     Math.max(
       0,
-      Math.min(100,me.health)
+      Math.min(
+        100,
+        me.health
+      )
     ) + "%";
 
   document.getElementById(
@@ -1509,7 +1731,10 @@ function updateHUD(){
   ).style.width =
     Math.max(
       0,
-      Math.min(100,me.shield)
+      Math.min(
+        100,
+        me.shield
+      )
     ) + "%";
 
   document.getElementById(
@@ -1534,7 +1759,10 @@ function updateHUD(){
   document.getElementById(
     "storm"
   ).textContent =
-    `🌪️ Zona: ${Math.round(storm.radius || 0)}`;
+    `🌪️ Zona: ${Math.round(
+      storm.radius || 0
+    )}`;
+
 }
 
 function updateList(){
@@ -1556,9 +1784,12 @@ function updateList(){
         </span>
       </div>
     `;
+
   }
 
-  for(const p of players.values()){
+  for(
+    const p of players.values()
+  ){
 
     html += `
       <div class="plist-item ${p.alive ? "" : "dead"}">
@@ -1569,20 +1800,26 @@ function updateList(){
         </span>
       </div>
     `;
+
   }
 
-  box.innerHTML = html;
+  box.innerHTML =
+    html;
+
 }
 
 function escapeHTML(text){
 
   const div =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   div.textContent =
     String(text);
 
   return div.innerHTML;
+
 }
 
 
@@ -1590,7 +1827,10 @@ function escapeHTML(text){
           CHAT
    ========================== */
 
-function addChat(name,message){
+function addChat(
+  name,
+  message
+){
 
   const box =
     document.getElementById(
@@ -1598,13 +1838,17 @@ function addChat(name,message){
     );
 
   const div =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   div.className =
     "chat-message";
 
   const b =
-    document.createElement("b");
+    document.createElement(
+      "b"
+    );
 
   b.textContent =
     name + ": ";
@@ -1612,35 +1856,50 @@ function addChat(name,message){
   div.appendChild(b);
 
   div.appendChild(
-    document.createTextNode(message)
+    document.createTextNode(
+      message
+    )
   );
 
   box.appendChild(div);
 
-  while(box.children.length > 8){
+  while(
+    box.children.length > 8
+  ){
+
     box.firstChild.remove();
+
   }
+
 }
 
 document
-  .getElementById("chat-input")
-  .addEventListener("keydown",e => {
+  .getElementById(
+    "chat-input"
+  )
+  .addEventListener(
+    "keydown",
+    e => {
 
-    if(e.key !== "Enter") return;
+      if(e.key !== "Enter")
+        return;
 
-    const value =
-      e.target.value.trim();
+      const value =
+        e.target.value.trim();
 
-    if(value){
+      if(value){
 
-      send({
-        type:"chat",
-        message:value
-      });
+        send({
+          type:"chat",
+          message:value
+        });
+
+      }
+
+      e.target.value = "";
+
     }
-
-    e.target.value = "";
-  });
+  );
 
 
 /* ==========================
@@ -1653,20 +1912,27 @@ window.addEventListener(
 
     if(
       document.activeElement ===
-      document.getElementById("chat-input")
+      document.getElementById(
+        "chat-input"
+      )
     ){
+
       return;
+
     }
 
     const key =
       e.key.toLowerCase();
 
-    if(key === "w" ||
-       key === "a" ||
-       key === "s" ||
-       key === "d"){
+    if(
+      key === "w" ||
+      key === "a" ||
+      key === "s" ||
+      key === "d"
+    ){
 
       keys[key] = true;
+
     }
 
     if(key === "1")
@@ -1695,6 +1961,7 @@ window.addEventListener(
 
     if(key === "6")
       doEmote("sit");
+
   }
 );
 
@@ -1707,6 +1974,7 @@ window.addEventListener(
 
     if(key in keys)
       keys[key] = false;
+
   }
 );
 
@@ -1718,12 +1986,25 @@ canvas.addEventListener(
       canvas.getBoundingClientRect();
 
     mouse.x =
-      (e.clientX - rect.left)
-      * (W / rect.width);
+      (
+        e.clientX -
+        rect.left
+      ) *
+      (
+        W /
+        rect.width
+      );
 
     mouse.y =
-      (e.clientY - rect.top)
-      * (H / rect.height);
+      (
+        e.clientY -
+        rect.top
+      ) *
+      (
+        H /
+        rect.height
+      );
+
   }
 );
 
@@ -1733,6 +2014,7 @@ canvas.addEventListener(
 
     if(e.button === 0)
       mouse.down = true;
+
   }
 );
 
@@ -1742,6 +2024,7 @@ window.addEventListener(
 
     if(e.button === 0)
       mouse.down = false;
+
   }
 );
 
@@ -1753,6 +2036,7 @@ window.addEventListener(
 function setSlot(n){
 
   currentSlot = n;
+
   buildMode = false;
 
   document
@@ -1768,13 +2052,16 @@ function setSlot(n){
       "active",
       n === 2
     );
+
 }
 
 function toggleBuild(){
 
-  if(!me?.alive) return;
+  if(!me?.alive)
+    return;
 
-  buildMode = !buildMode;
+  buildMode =
+    !buildMode;
 
   document
     .getElementById("action")
@@ -1789,26 +2076,36 @@ function toggleBuild(){
     buildMode
       ? "🧱 MODO CONSTRUCCIÓN"
       : "";
+
 }
 
 function build(){
 
-  if(!me?.alive) return;
+  if(!me?.alive)
+    return;
 
-  if(me.materials < 10) return;
+  if(me.materials < 10)
+    return;
 
   const x =
     me.x +
-    Math.cos(me.angle) * 70 -
+    Math.cos(me.angle) *
+    70 -
     30;
 
   const y =
     me.y +
-    Math.sin(me.angle) * 70 -
+    Math.sin(me.angle) *
+    70 -
     30;
 
   const kinds =
-    ["wall","ramp","floor","roof"];
+    [
+      "wall",
+      "ramp",
+      "floor",
+      "roof"
+    ];
 
   const kind =
     kinds[
@@ -1823,16 +2120,20 @@ function build(){
     y,
     kind
   });
+
 }
 
 function pickup(){
 
-  if(!me?.alive) return;
+  if(!me?.alive)
+    return;
 
   let nearest = null;
   let best = 80;
 
-  for(const item of loot){
+  for(
+    const item of loot
+  ){
 
     const d =
       distance(me,item);
@@ -1841,7 +2142,9 @@ function pickup(){
 
       best = d;
       nearest = item;
+
     }
+
   }
 
   if(nearest){
@@ -1850,7 +2153,9 @@ function pickup(){
       type:"pickup",
       lootId:nearest.id
     });
+
   }
+
 }
 
 function swing(){
@@ -1859,14 +2164,19 @@ function swing(){
     !me?.alive ||
     currentSlot !== 1
   ){
+
     return;
+
   }
 
   if(
-    Date.now() - lastSwing <
+    Date.now() -
+    lastSwing <
     350
   ){
+
     return;
+
   }
 
   lastSwing =
@@ -1875,7 +2185,9 @@ function swing(){
   let nearest = null;
   let best = 65;
 
-  for(const tree of trees){
+  for(
+    const tree of trees
+  ){
 
     const d =
       distance(me,tree);
@@ -1884,7 +2196,9 @@ function swing(){
 
       best = d;
       nearest = tree;
+
     }
+
   }
 
   if(nearest){
@@ -1893,7 +2207,9 @@ function swing(){
       type:"treeHit",
       treeId:nearest.id
     });
+
   }
+
 }
 
 function shoot(){
@@ -1903,31 +2219,38 @@ function shoot(){
     currentSlot !== 2 ||
     buildMode
   ){
+
     return;
+
   }
 
   send({
     type:"shoot"
   });
+
 }
 
 function reload(){
 
-  if(!me?.alive) return;
+  if(!me?.alive)
+    return;
 
   send({
     type:"reload"
   });
+
 }
 
 function doEmote(type){
 
-  if(!me?.alive) return;
+  if(!me?.alive)
+    return;
 
   send({
     type:"emote",
     emote:type
   });
+
 }
 
 
@@ -1966,7 +2289,10 @@ function setupJoystick(
       rect.width / 2 - 27;
 
     const len =
-      Math.hypot(dx,dy);
+      Math.hypot(
+        dx,
+        dy
+      );
 
     if(len > max){
 
@@ -1975,6 +2301,7 @@ function setupJoystick(
 
       dy =
         dy / len * max;
+
     }
 
     knob.style.transform =
@@ -1984,6 +2311,7 @@ function setupJoystick(
       dx / max,
       dy / max
     );
+
   }
 
   function end(){
@@ -1993,7 +2321,11 @@ function setupJoystick(
     knob.style.transform =
       "translate(0,0)";
 
-    callback(0,0);
+    callback(
+      0,
+      0
+    );
+
   }
 
   element.addEventListener(
@@ -2010,6 +2342,7 @@ function setupJoystick(
       );
 
       update(e);
+
     }
   );
 
@@ -2017,12 +2350,18 @@ function setupJoystick(
     "pointermove",
     e => {
 
-      if(e.pointerId !== pointerId)
+      if(
+        e.pointerId !== pointerId
+      ){
+
         return;
+
+      }
 
       e.preventDefault();
 
       update(e);
+
     }
   );
 
@@ -2035,48 +2374,71 @@ function setupJoystick(
     "pointercancel",
     end
   );
+
 }
 
 setupJoystick(
-  document.getElementById("move-stick"),
-  document.getElementById("move-knob"),
+  document.getElementById(
+    "move-stick"
+  ),
+  document.getElementById(
+    "move-knob"
+  ),
   (x,y) => {
 
     mobileMove.x = x;
     mobileMove.y = y;
 
-    keys.w = y < -0.2;
-    keys.s = y > 0.2;
-    keys.a = x < -0.2;
-    keys.d = x > 0.2;
+    keys.w =
+      y < -0.2;
+
+    keys.s =
+      y > 0.2;
+
+    keys.a =
+      x < -0.2;
+
+    keys.d =
+      x > 0.2;
+
   }
 );
 
 setupJoystick(
-  document.getElementById("aim-stick"),
-  document.getElementById("aim-knob"),
+  document.getElementById(
+    "aim-stick"
+  ),
+  document.getElementById(
+    "aim-knob"
+  ),
   (x,y) => {
 
-    if(Math.hypot(x,y) > 0.15){
+    if(
+      Math.hypot(x,y) > 0.15
+    ){
 
       mobileAim.x = x;
       mobileAim.y = y;
       mobileAim.active = true;
 
       meAngleFromMobile();
+
     }
+
   }
 );
 
 function meAngleFromMobile(){
 
-  if(!me) return;
+  if(!me)
+    return;
 
   me.angle =
     Math.atan2(
       mobileAim.y,
       mobileAim.x
     );
+
 }
 
 
@@ -2093,7 +2455,8 @@ function mobileButton(
   const button =
     document.getElementById(id);
 
-  if(!button) return;
+  if(!button)
+    return;
 
   button.addEventListener(
     "pointerdown",
@@ -2107,6 +2470,7 @@ function mobileButton(
       button.setPointerCapture(
         e.pointerId
       );
+
     }
   );
 
@@ -2118,6 +2482,7 @@ function mobileButton(
 
       if(up)
         up();
+
     }
   );
 
@@ -2127,56 +2492,72 @@ function mobileButton(
 
       if(up)
         up();
+
     }
   );
+
 }
 
 mobileButton(
   "mobile-fire",
   () => {
+
     mouse.down = true;
+
   },
   () => {
+
     mouse.down = false;
+
   }
 );
 
 mobileButton(
   "mobile-pickaxe",
   () => {
+
     setSlot(1);
     swing();
+
   }
 );
 
 mobileButton(
   "mobile-weapon",
   () => {
+
     setSlot(2);
+
   }
 );
 
 mobileButton(
   "mobile-pickup",
   () => {
+
     pickup();
+
   }
 );
 
 mobileButton(
   "mobile-reload",
   () => {
+
     reload();
+
   }
 );
 
 mobileButton(
   "mobile-build",
   () => {
+
     toggleBuild();
 
     if(buildMode)
       build();
+
   }
 );
 
@@ -2192,9 +2573,15 @@ function loop(){
 
   if(!me){
 
-    requestAnimationFrame(loop);
+    requestAnimationFrame(
+      loop
+    );
+
     return;
+
   }
+
+  let moving = false;
 
   if(
     me.alive &&
@@ -2210,15 +2597,42 @@ function loop(){
       (keys.w ? 1 : 0);
 
     const length =
-      Math.hypot(dx,dy);
+      Math.hypot(
+        dx,
+        dy
+      );
 
     if(length > 0){
 
       dx /= length;
       dy /= length;
 
-      me.x += dx * 3.7;
-      me.y += dy * 3.7;
+      me.x +=
+        dx * 3.7;
+
+      me.y +=
+        dy * 3.7;
+
+      moving = true;
+
+      /*
+        Si el jugador se mueve con WASD,
+        también orientamos el cuerpo hacia
+        la dirección de movimiento si no
+        estamos usando apuntado móvil.
+      */
+
+      if(
+        !isMobileDevice() ||
+        !mobileAim.active
+      ){
+
+        /*
+          El ratón sigue controlando el arma.
+        */
+
+      }
+
     }
 
     me.x =
@@ -2239,9 +2653,9 @@ function loop(){
         )
       );
 
+
     /*
-      En PC el ángulo viene del ratón.
-      En móvil viene del joystick derecho.
+      Ángulo del arma.
     */
 
     if(
@@ -2254,23 +2668,23 @@ function loop(){
           mouse.y - H / 2,
           mouse.x - W / 2
         );
+
     }
 
     if(mouse.down){
 
       shoot();
+
     }
 
-    if(
-      currentSlot === 1 &&
-      mobileMove.x === 0 &&
-      mobileMove.y === 0
-    ){
-      // el pico se usa mediante botón
-    }
+    updatePlayerAnimation(
+      moving
+    );
+
 
     if(
-      Date.now() - lastUpdate >
+      Date.now() -
+      lastUpdate >
       60
     ){
 
@@ -2283,12 +2697,17 @@ function loop(){
         y:me.y,
         angle:me.angle
       });
+
     }
+
   }
 
   draw();
 
-  requestAnimationFrame(loop);
+  requestAnimationFrame(
+    loop
+  );
+
 }
 
 
@@ -2310,13 +2729,16 @@ function draw(){
     drawBackground();
 
     return;
+
   }
 
   camX =
-    me.x - W / 2;
+    me.x -
+    W / 2;
 
   camY =
-    me.y - H / 2;
+    me.y -
+    H / 2;
 
   camX =
     Math.max(
@@ -2337,6 +2759,7 @@ function draw(){
     );
 
   drawWorld();
+
 }
 
 function drawBackground(){
@@ -2345,8 +2768,12 @@ function drawBackground(){
     "#17241a";
 
   ctx.fillRect(
-    0,0,W,H
+    0,
+    0,
+    W,
+    H
   );
+
 }
 
 function drawWorld(){
@@ -2355,11 +2782,15 @@ function drawWorld(){
     "#243b25";
 
   ctx.fillRect(
-    0,0,W,H
+    0,
+    0,
+    W,
+    H
   );
 
+
   /*
-    cuadrícula pixelada
+    CUADRÍCULA
   */
 
   ctx.strokeStyle =
@@ -2377,9 +2808,19 @@ function drawWorld(){
   ){
 
     ctx.beginPath();
-    ctx.moveTo(x,0);
-    ctx.lineTo(x,H);
+
+    ctx.moveTo(
+      x,
+      0
+    );
+
+    ctx.lineTo(
+      x,
+      H
+    );
+
     ctx.stroke();
+
   }
 
   for(
@@ -2390,30 +2831,45 @@ function drawWorld(){
   ){
 
     ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(W,y);
+
+    ctx.moveTo(
+      0,
+      y
+    );
+
+    ctx.lineTo(
+      W,
+      y
+    );
+
     ctx.stroke();
+
   }
 
 
   /*
-       Loot
+       LOOT
   */
 
-  for(const item of loot){
+  for(
+    const item of loot
+  ){
 
     const x =
-      item.x - camX;
+      item.x -
+      camX;
 
     const y =
-      item.y - camY;
+      item.y -
+      camY;
 
     if(
       x < -30 ||
       y < -30 ||
-      x > W+30 ||
-      y > H+30
-    ) continue;
+      x > W + 30 ||
+      y > H + 30
+    )
+      continue;
 
     ctx.font =
       "24px Arial";
@@ -2427,31 +2883,38 @@ function drawWorld(){
     };
 
     ctx.fillText(
-      icons[item.type] || "📦",
+      icons[item.type] ||
+      "📦",
       x - 12,
       y + 8
     );
+
   }
 
 
   /*
-       Árboles
+       ÁRBOLES
   */
 
-  for(const tree of trees){
+  for(
+    const tree of trees
+  ){
 
     const x =
-      tree.x - camX;
+      tree.x -
+      camX;
 
     const y =
-      tree.y - camY;
+      tree.y -
+      camY;
 
     if(
       x < -50 ||
       y < -50 ||
-      x > W+50 ||
-      y > H+50
-    ) continue;
+      x > W + 50 ||
+      y > H + 50
+    )
+      continue;
 
     ctx.fillStyle =
       "#633f25";
@@ -2492,20 +2955,25 @@ function drawWorld(){
     );
 
     ctx.fill();
+
   }
 
 
   /*
-       Construcciones
+       CONSTRUCCIONES
   */
 
-  for(const wall of walls){
+  for(
+    const wall of walls
+  ){
 
     const x =
-      wall.x - camX;
+      wall.x -
+      camX;
 
     const y =
-      wall.y - camY;
+      wall.y -
+      camY;
 
     ctx.fillStyle =
       wall.team === me.team
@@ -2528,34 +2996,49 @@ function drawWorld(){
       wall.width,
       wall.height
     );
+
   }
 
 
   /*
-       Jugadores
+       JUGADORES
   */
 
-  for(const p of players.values()){
+  for(
+    const p of players.values()
+  ){
 
     if(!p.alive)
       continue;
 
-    drawPlayer(p,false);
+    drawPlayer(
+      p,
+      false
+    );
+
   }
 
-  if(me.alive)
-    drawPlayer(me,true);
+  if(me.alive){
+
+    drawPlayer(
+      me,
+      true
+    );
+
+  }
 
 
   /*
-       Storm
+       STORM
   */
 
   const sx =
-    storm.x - camX;
+    storm.x -
+    camX;
 
   const sy =
-    storm.y - camY;
+    storm.y -
+    camY;
 
   ctx.save();
 
@@ -2563,7 +3046,10 @@ function drawWorld(){
     "rgba(80,130,255,.16)";
 
   ctx.fillRect(
-    0,0,W,H
+    0,
+    0,
+    W,
+    H
   );
 
   ctx.globalCompositeOperation =
@@ -2599,15 +3085,23 @@ function drawWorld(){
   );
 
   ctx.stroke();
+
 }
+
+
+/* =====================================================
+            PERSONAJE 2D PIXEL ART
+   ===================================================== */
 
 function drawPlayer(p,isMe){
 
   const x =
-    p.x - camX;
+    p.x -
+    camX;
 
   const y =
-    p.y - camY;
+    p.y -
+    camY;
 
   const color =
     isMe
@@ -2618,57 +3112,339 @@ function drawPlayer(p,isMe){
           : "#ff4d5d"
       );
 
+  /*
+    Si está muy lejos, no dibujamos
+    para ahorrar rendimiento.
+  */
+
+  if(
+    x < -100 ||
+    y < -100 ||
+    x > W + 100 ||
+    y > H + 100
+  ){
+
+    return;
+
+  }
+
+
+  /*
+       SOMBRA
+  */
+
+  ctx.save();
+
+  ctx.translate(
+    Math.round(x),
+    Math.round(y)
+  );
+
+  ctx.imageSmoothingEnabled =
+    false;
+
   ctx.fillStyle =
-    color;
+    "rgba(0,0,0,.35)";
 
   ctx.beginPath();
 
-  ctx.arc(
-    x,
-    y,
-    17,
+  ctx.ellipse(
+    0,
+    21,
+    16,
+    6,
+    0,
     0,
     Math.PI * 2
   );
 
   ctx.fill();
 
-  ctx.strokeStyle =
-    "#ffffff";
-
-  ctx.lineWidth = 2;
-
-  ctx.stroke();
-
 
   /*
-      dirección
+       ANIMACIÓN
   */
 
-  ctx.strokeStyle =
-    "#fff";
+  const moving =
+    p === me
+      ? (
+        keys.w ||
+        keys.a ||
+        keys.s ||
+        keys.d
+      )
+      : true;
 
-  ctx.lineWidth = 3;
+  const walk =
+    moving
+      ? Math.sin(
+          playerAnimationTime * 4 +
+          (p.id ? hashString(p.id) : 0)
+        )
+      : 0;
 
-  ctx.beginPath();
+  const legA =
+    Math.round(
+      walk * 4
+    );
 
-  ctx.moveTo(
-    x,
-    y
-  );
-
-  ctx.lineTo(
-    x +
-      Math.cos(p.angle) * 29,
-    y +
-      Math.sin(p.angle) * 29
-  );
-
-  ctx.stroke();
+  const legB =
+    -legA;
 
 
   /*
-       Nombre
+       COLOR DE PELO
+  */
+
+  const hair =
+    "#3b2419";
+
+  /*
+       CABEZA
+  */
+
+  ctx.fillStyle =
+    "#f1b27a";
+
+  ctx.fillRect(
+    -8,
+    -25,
+    16,
+    15
+  );
+
+  /*
+       OREJA
+  */
+
+  ctx.fillRect(
+    -10,
+    -21,
+    3,
+    6
+  );
+
+  ctx.fillRect(
+    7,
+    -21,
+    3,
+    6
+  );
+
+
+  /*
+       PELO
+  */
+
+  ctx.fillStyle =
+    hair;
+
+  ctx.fillRect(
+    -9,
+    -28,
+    18,
+    6
+  );
+
+  ctx.fillRect(
+    -7,
+    -31,
+    14,
+    4
+  );
+
+  ctx.fillRect(
+    -10,
+    -27,
+    4,
+    8
+  );
+
+
+  /*
+       OJOS
+  */
+
+  ctx.fillStyle =
+    "#111";
+
+  ctx.fillRect(
+    -5,
+    -20,
+    3,
+    3
+  );
+
+  ctx.fillRect(
+    2,
+    -20,
+    3,
+    3
+  );
+
+
+  /*
+       CUERPO
+  */
+
+  ctx.fillStyle =
+    color;
+
+  ctx.fillRect(
+    -11,
+    -10,
+    22,
+    24
+  );
+
+
+  /*
+       CHALECO
+  */
+
+  ctx.fillStyle =
+    isMe
+      ? "#0788b3"
+      : (
+        p.team === me.team
+          ? "#24964e"
+          : "#b72f3b"
+      );
+
+  ctx.fillRect(
+    -9,
+    -8,
+    18,
+    19
+  );
+
+
+  /*
+       CAMISETA CENTRAL
+  */
+
+  ctx.fillStyle =
+    "#27384c";
+
+  ctx.fillRect(
+    -4,
+    -6,
+    8,
+    17
+  );
+
+
+  /*
+       BRAZO TRASERO
+  */
+
+  ctx.save();
+
+  ctx.rotate(
+    p.angle + Math.PI / 2
+  );
+
+  ctx.fillStyle =
+    "#f1b27a";
+
+  ctx.fillRect(
+    -19,
+    -4,
+    7,
+    18
+  );
+
+  ctx.restore();
+
+
+  /*
+       BRAZO DELANTERO
+  */
+
+  ctx.save();
+
+  ctx.rotate(
+    p.angle + Math.PI / 2
+  );
+
+  ctx.fillStyle =
+    color;
+
+  ctx.fillRect(
+    11,
+    -5,
+    7,
+    12
+  );
+
+  ctx.fillStyle =
+    "#f1b27a";
+
+  ctx.fillRect(
+    11,
+    5,
+    7,
+    7
+  );
+
+  ctx.restore();
+
+
+  /*
+       PIERNAS
+  */
+
+  ctx.fillStyle =
+    "#18202d";
+
+  ctx.fillRect(
+    -9,
+    13,
+    8,
+    14 + legA
+  );
+
+  ctx.fillRect(
+    1,
+    13,
+    8,
+    14 + legB
+  );
+
+
+  /*
+       ZAPATOS
+  */
+
+  ctx.fillStyle =
+    "#090c12";
+
+  ctx.fillRect(
+    -11,
+    25 + legA,
+    11,
+    5
+  );
+
+  ctx.fillRect(
+    0,
+    25 + legB,
+    11,
+    5
+  );
+
+
+  /*
+       ARMA
+  */
+
+  drawWeapon(
+    p
+  );
+
+
+  /*
+       NOMBRE
   */
 
   ctx.font =
@@ -2677,43 +3453,224 @@ function drawPlayer(p,isMe){
   ctx.textAlign =
     "center";
 
+  ctx.textBaseline =
+    "alphabetic";
+
+  /*
+       Fondo pequeño para el nombre
+  */
+
+  const name =
+    String(p.name || "Jugador");
+
+  const nameWidth =
+    ctx.measureText(name).width;
+
+  ctx.fillStyle =
+    "rgba(0,0,0,.65)";
+
+  ctx.fillRect(
+    -nameWidth / 2 - 4,
+    -45,
+    nameWidth + 8,
+    13
+  );
+
   ctx.fillStyle =
     "#fff";
 
   ctx.fillText(
-    p.name,
-    x,
-    y - 27
+    name,
+    0,
+    -35
   );
 
 
   /*
-       Vida
+       BARRA DE VIDA
   */
 
   ctx.fillStyle =
-    "#111";
+    "#101318";
 
   ctx.fillRect(
-    x - 22,
-    y + 23,
+    -22,
+    33,
     44,
     5
   );
 
   ctx.fillStyle =
-    "#35e36e";
+    isMe
+      ? "#35e36e"
+      : (
+        p.team === me.team
+          ? "#35e36e"
+          : "#ff4658"
+      );
 
   ctx.fillRect(
-    x - 22,
-    y + 23,
+    -22,
+    33,
     44 *
       Math.max(
         0,
-        p.health / 100
+        Math.min(
+          1,
+          (p.health || 0) / 100
+        )
       ),
     5
   );
+
+
+  /*
+       BORDE AZUL PARA EL JUGADOR
+  */
+
+  if(isMe){
+
+    ctx.strokeStyle =
+      "rgba(0,198,255,.9)";
+
+    ctx.lineWidth = 2;
+
+    ctx.strokeRect(
+      -14,
+      -33,
+      28,
+      67
+    );
+
+  }
+
+
+  ctx.restore();
+
+}
+
+
+/* ==========================
+          ARMA 2D
+   ========================== */
+
+function drawWeapon(p){
+
+  ctx.save();
+
+  /*
+     Colocamos el arma en el lado
+     derecho del personaje.
+  */
+
+  ctx.rotate(
+    p.angle || 0
+  );
+
+  /*
+       Cuerpo del arma
+  */
+
+  ctx.fillStyle =
+    "#171b22";
+
+  ctx.fillRect(
+    4,
+    -4,
+    25,
+    7
+  );
+
+  /*
+       Parte superior
+  */
+
+  ctx.fillStyle =
+    "#343b47";
+
+  ctx.fillRect(
+    10,
+    -7,
+    14,
+    4
+  );
+
+  /*
+       Cañón
+  */
+
+  ctx.fillStyle =
+    "#090b0e";
+
+  ctx.fillRect(
+    27,
+    -3,
+    13,
+    4
+  );
+
+  /*
+       Empuñadura
+  */
+
+  ctx.fillStyle =
+    "#5b3a28";
+
+  ctx.fillRect(
+    8,
+    3,
+    7,
+    9
+  );
+
+  /*
+       Mira
+  */
+
+  ctx.fillStyle =
+    "#5e6673";
+
+  ctx.fillRect(
+    17,
+    -10,
+    5,
+    3
+  );
+
+  ctx.restore();
+
+}
+
+
+/* ==========================
+      HASH PARA ANIMACIONES
+   ========================== */
+
+function hashString(str){
+
+  let hash = 0;
+
+  for(
+    let i = 0;
+    i < str.length;
+    i++
+  ){
+
+    hash =
+      (
+        (
+          hash << 5
+        ) -
+        hash
+      ) +
+      str.charCodeAt(i);
+
+    hash |= 0;
+
+  }
+
+  return Math.abs(hash) / 1000;
+
 }
 
 
@@ -2727,6 +3684,7 @@ function distance(a,b){
     a.x - b.x,
     a.y - b.y
   );
+
 }
 
 function isMobileDevice(){
@@ -2736,8 +3694,11 @@ function isMobileDevice(){
       "(pointer:coarse)"
     ).matches ||
     /Android|iPhone|iPad|iPod/i
-      .test(navigator.userAgent)
+      .test(
+        navigator.userAgent
+      )
   );
+
 }
 
 
@@ -2748,7 +3709,9 @@ function isMobileDevice(){
 function playAgain(){
 
   document
-    .getElementById("end-overlay")
+    .getElementById(
+      "end-overlay"
+    )
     .classList.add("hidden");
 
   send({
@@ -2756,6 +3719,7 @@ function playAgain(){
   });
 
   location.reload();
+
 }
 
 
@@ -2764,6 +3728,7 @@ function playAgain(){
    ========================== */
 
 drawBackground();
+
 </script>
 
 </body>
