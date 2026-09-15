@@ -1,3 +1,4 @@
+
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -10,10 +11,13 @@ const MAX_POSITION_DELTA = 30;
 const STATE_INTERVAL = 50;
 
 const server = http.createServer((req, res) => {
-  let filePath =
-    req.url === "/" || req.url === "/index.html"
-      ? path.join(__dirname, "client.html")
-      : path.join(__dirname, req.url);
+  let requestedPath = req.url || "/";
+
+  if (requestedPath === "/") {
+    requestedPath = "/client.html";
+  }
+
+  const filePath = path.join(__dirname, requestedPath);
 
   if (!fs.existsSync(filePath)) {
     res.writeHead(404);
@@ -23,14 +27,15 @@ const server = http.createServer((req, res) => {
 
   const ext = path.extname(filePath);
 
-  const contentType =
-    ext === ".html"
-      ? "text/html; charset=utf-8"
-      : ext === ".js"
-      ? "application/javascript; charset=utf-8"
-      : ext === ".css"
-      ? "text/css; charset=utf-8"
-      : "application/octet-stream";
+  let contentType = "application/octet-stream";
+
+  if (ext === ".html") {
+    contentType = "text/html; charset=utf-8";
+  } else if (ext === ".js") {
+    contentType = "application/javascript; charset=utf-8";
+  } else if (ext === ".css") {
+    contentType = "text/css; charset=utf-8";
+  }
 
   res.writeHead(200, {
     "Content-Type": contentType
@@ -60,6 +65,26 @@ const EMOTES = new Set([
   "😎"
 ]);
 
+function send(ws, data) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+  }
+}
+
+function broadcastParty(partyCode, data) {
+  if (!partyCode) return;
+
+  for (const player of players.values()) {
+    if (
+      player.partyCode === partyCode &&
+      player.ws &&
+      player.ws.readyState === WebSocket.OPEN
+    ) {
+      player.ws.send(JSON.stringify(data));
+    }
+  }
+}
+
 function randomPartyCode() {
   let code;
 
@@ -73,39 +98,46 @@ function randomPartyCode() {
   return code;
 }
 
-function send(ws, data) {
-  if (
-    ws &&
-    ws.readyState === WebSocket.OPEN
-  ) {
-    ws.send(JSON.stringify(data));
-  }
-}
+function serializePlayer(player) {
+  return {
+    id: player.id,
+    name: player.name,
 
-function broadcastParty(partyCode, data) {
-  if (!partyCode) return;
+    x: player.x,
+    y: player.y,
 
-  for (const player of players.values()) {
-    if (
-      player.partyCode === partyCode &&
-      player.ws.readyState === WebSocket.OPEN
-    ) {
-      player.ws.send(
-        JSON.stringify(data)
-      );
-    }
-  }
+    angle: player.angle,
+
+    hp: player.hp,
+    shield: player.shield,
+
+    weapon: player.weapon,
+
+    ammo: player.ammo,
+    maxAmmo: player.maxAmmo,
+
+    kills: player.kills,
+
+    alive: player.alive,
+    moving: player.moving,
+
+    team: player.team,
+
+    selectedSlot: player.selectedSlot,
+
+    emote: player.emote,
+    emoteUntil: player.emoteUntil,
+
+    pickaxeUntil: player.pickaxeUntil
+  };
 }
 
 function createPlayer(ws, name) {
   const player = {
     id: nextPlayerId++,
-
     ws,
 
-    name: String(
-      name || "Player"
-    ).substring(0, 16),
+    name: String(name || "Player").substring(0, 16),
 
     x: WORLD_SIZE / 2,
     y: WORLD_SIZE / 2,
@@ -128,6 +160,7 @@ function createPlayer(ws, name) {
     team: null,
 
     partyCode: null,
+
     ready: false,
     isHost: false,
 
@@ -139,35 +172,16 @@ function createPlayer(ws, name) {
     pickaxeUntil: 0
   };
 
-  players.set(
-    player.id,
-    player
-  );
+  players.set(player.id, player);
 
-  /*
-   * IMPORTANTE:
-   * El cliente usa este mensaje para
-   * conocer su propio jugador.
-   */
+  send(ws, {
+    type: "player",
+    player: serializePlayer(player)
+  });
+
   send(ws, {
     type: "joined",
-
-    player: {
-      id: player.id,
-      name: player.name,
-      x: player.x,
-      y: player.y,
-      angle: player.angle,
-      hp: player.hp,
-      shield: player.shield,
-      ammo: player.ammo,
-      weapon: player.weapon,
-      alive: player.alive,
-      selectedSlot: player.selectedSlot,
-      emote: null,
-      pickaxeUntil: 0
-    },
-
+    player: serializePlayer(player),
     partyCode: null
   });
 
@@ -175,39 +189,64 @@ function createPlayer(ws, name) {
 }
 
 function ensurePlayer(ws, name) {
-  /*
-   * El cliente actual crea la partida
-   * directamente con createParty.
-   *
-   * Por eso el servidor crea el jugador
-   * automáticamente si todavía no existe.
-   */
-
-  for (const existing of players.values()) {
-    if (existing.ws === ws) {
+  for (const player of players.values()) {
+    if (player.ws === ws) {
       if (name) {
-        existing.name = String(name)
-          .substring(0, 16);
+        player.name = String(name).substring(0, 16);
       }
 
-      return existing;
+      return player;
     }
   }
 
-  return createPlayer(
-    ws,
-    name
-  );
+  return createPlayer(ws, name);
+}
+
+function getPartyState(party) {
+  return {
+    code: party.code,
+    hostId: party.hostId,
+    started: party.started,
+    teamMode: party.teamMode,
+
+    players: [...party.players]
+      .map(id => players.get(id))
+      .filter(Boolean)
+      .map(player => ({
+        id: player.id,
+        name: player.name,
+        ready: player.ready,
+        isHost: player.isHost,
+        team: player.team
+      }))
+  };
+}
+
+function sendPartyState(party) {
+  if (!party) return;
+
+  const state = getPartyState(party);
+
+  broadcastParty(party.code, {
+    type: "party",
+
+    code: state.code,
+    hostId: state.hostId,
+    started: state.started,
+    teamMode: state.teamMode,
+    players: state.players,
+
+    party: state
+  });
 }
 
 function removePlayerFromParty(player) {
-  if (!player.partyCode) return;
+  if (!player.partyCode) {
+    return;
+  }
 
-  const oldPartyCode =
-    player.partyCode;
-
-  const party =
-    parties.get(oldPartyCode);
+  const oldPartyCode = player.partyCode;
+  const party = parties.get(oldPartyCode);
 
   if (!party) {
     player.partyCode = null;
@@ -216,23 +255,20 @@ function removePlayerFromParty(player) {
     return;
   }
 
-  party.players.delete(
-    player.id
-  );
+  party.players.delete(player.id);
 
-  if (
-    party.hostId === player.id
-  ) {
-    const nextHost =
-      [...party.players][0] ||
-      null;
+  player.partyCode = null;
+  player.ready = false;
+  player.isHost = false;
+  player.team = null;
 
-    party.hostId =
-      nextHost;
+  if (party.hostId === player.id) {
+    const nextHost = [...party.players][0] || null;
+
+    party.hostId = nextHost;
 
     if (nextHost) {
-      const hostPlayer =
-        players.get(nextHost);
+      const hostPlayer = players.get(nextHost);
 
       if (hostPlayer) {
         hostPlayer.isHost = true;
@@ -240,313 +276,113 @@ function removePlayerFromParty(player) {
     }
   }
 
-  if (
-    party.players.size === 0
-  ) {
-    parties.delete(
-      oldPartyCode
-    );
-  } else {
-    broadcastParty(
-      oldPartyCode,
-      {
-        type: "party",
-        party: getPartyState(
-          party
-        )
-      }
-    );
+  if (party.players.size === 0) {
+    parties.delete(oldPartyCode);
+    return;
   }
 
-  player.partyCode = null;
-  player.ready = false;
-  player.isHost = false;
+  sendPartyState(party);
 }
 
-function getPartyState(party) {
-  return {
-    code: party.code,
+function createParty(player, teamMode) {
+  removePlayerFromParty(player);
 
-    hostId: party.hostId,
-
-    started: party.started,
-
-    teamMode: party.teamMode,
-
-    players: [...party.players]
-      .map(id => players.get(id))
-      .filter(Boolean)
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        ready: p.ready,
-        isHost: p.isHost,
-        team: p.team
-      }))
-  };
-}
-
-function createParty(
-  player,
-  teamMode
-) {
-  removePlayerFromParty(
-    player
-  );
-
-  const code =
-    randomPartyCode();
+  const code = randomPartyCode();
 
   const party = {
     code,
+    hostId: player.id,
 
-    hostId:
-      player.id,
-
-    players:
-      new Set([
-        player.id
-      ]),
+    players: new Set([player.id]),
 
     started: false,
 
-    teamMode:
-      teamMode || "solo"
+    teamMode: teamMode || "solo"
   };
 
-  parties.set(
-    code,
-    party
-  );
+  parties.set(code, party);
 
-  player.partyCode =
-    code;
+  player.partyCode = code;
+  player.ready = false;
+  player.isHost = true;
 
-  player.ready =
-    false;
-
-  player.isHost =
-    true;
-
-  /*
-   * IMPORTANTE:
-   * El cliente espera code y players
-   * directamente dentro del mensaje.
-   */
-  send(wsFor(player), {
-    type: "party",
-
-    code: party.code,
-
-    hostId: party.hostId,
-
-    started: party.started,
-
-    teamMode: party.teamMode,
-
-    players:
-      getPartyState(party)
-        .players,
-
-    party:
-      getPartyState(party)
-  });
+  sendPartyState(party);
 }
 
-function wsFor(player) {
-  return player
-    ? player.ws
-    : null;
-}
+function joinParty(player, code) {
+  code = String(code || "")
+    .trim()
+    .toUpperCase();
 
-function joinParty(
-  player,
-  code
-) {
-  code =
-    String(code || "")
-      .trim()
-      .toUpperCase();
-
-  const party =
-    parties.get(code);
+  const party = parties.get(code);
 
   if (!party) {
-    send(
-      player.ws,
-      {
-        type: "error",
-        message:
-          "Partida no encontrada"
-      }
-    );
+    send(player.ws, {
+      type: "error",
+      message: "Partida no encontrada"
+    });
 
     return;
   }
 
   if (party.started) {
-    send(
-      player.ws,
-      {
-        type: "error",
-        message:
-          "La partida ya ha comenzado"
-      }
-    );
+    send(player.ws, {
+      type: "error",
+      message: "La partida ya ha comenzado"
+    });
 
     return;
   }
 
-  removePlayerFromParty(
-    player
-  );
+  removePlayerFromParty(player);
 
-  party.players.add(
-    player.id
-  );
+  party.players.add(player.id);
 
-  player.partyCode =
-    code;
+  player.partyCode = party.code;
+  player.ready = false;
+  player.isHost = false;
 
-  player.ready =
-    false;
-
-  player.isHost =
-    false;
-
-  const state =
-    getPartyState(
-      party
-    );
-
-  send(
-    player.ws,
-    {
-      type: "party",
-
-      code: state.code,
-
-      hostId: state.hostId,
-
-      started: state.started,
-
-      teamMode: state.teamMode,
-
-      players:
-        state.players,
-
-      party: state
-    }
-  );
-
-  broadcastParty(
-    code,
-    {
-      type: "party",
-
-      code: state.code,
-
-      hostId: state.hostId,
-
-      started: state.started,
-
-      teamMode: state.teamMode,
-
-      players:
-        state.players,
-
-      party: state
-    }
-  );
+  sendPartyState(party);
 }
 
-function setReady(
-  player,
-  ready
-) {
-  if (!player.partyCode) {
-    return;
-  }
+function setReady(player, ready) {
+  if (!player.partyCode) return;
 
-  const party =
-    parties.get(
-      player.partyCode
-    );
+  const party = parties.get(player.partyCode);
 
   if (!party) return;
 
-  player.ready =
-    !!ready;
+  player.ready = !!ready;
 
-  const state =
-    getPartyState(
-      party
-    );
-
-  broadcastParty(
-    player.partyCode,
-    {
-      type: "party",
-
-      code: state.code,
-
-      hostId: state.hostId,
-
-      started: state.started,
-
-      teamMode: state.teamMode,
-
-      players:
-        state.players,
-
-      party: state
-    }
-  );
+  sendPartyState(party);
 }
 
 function startParty(player) {
   if (!player.partyCode) {
-    send(
-      player.ws,
-      {
-        type: "error",
-        message:
-          "Primero crea o únete a una partida."
-      }
-    );
+    send(player.ws, {
+      type: "error",
+      message: "Primero crea o únete a una partida."
+    });
 
     return;
   }
 
-  const party =
-    parties.get(
-      player.partyCode
-    );
+  const party = parties.get(player.partyCode);
 
   if (!party) {
-    send(
-      player.ws,
-      {
-        type: "error",
-        message:
-          "La partida no existe."
-      }
-    );
+    send(player.ws, {
+      type: "error",
+      message: "La partida no existe."
+    });
 
     return;
   }
 
-  if (
-    party.hostId !== player.id
-  ) {
-    send(
-      player.ws,
-      {
-        type: "error",
-        message:
-          "Solo el anfitrión puede iniciar"
-      }
-    );
+  if (party.hostId !== player.id) {
+    send(player.ws, {
+      type: "error",
+      message: "Solo el anfitrión puede iniciar."
+    });
 
     return;
   }
@@ -557,304 +393,110 @@ function startParty(player) {
 
   party.started = true;
 
-  const partyPlayers =
-    [...party.players]
-      .map(id =>
-        players.get(id)
-      )
-      .filter(Boolean);
+  const partyPlayers = [...party.players]
+    .map(id => players.get(id))
+    .filter(Boolean);
 
-  /*
-   * Equipos
-   */
   if (
-    party.teamMode === "teams" ||
     party.teamMode === "duo" ||
-    party.teamMode === "squad"
+    party.teamMode === "squad" ||
+    party.teamMode === "teams"
   ) {
-    partyPlayers.forEach(
-      (p, index) => {
-        p.team =
-          index % 2;
-      }
-    );
+    partyPlayers.forEach((p, index) => {
+      p.team = index % 2;
+    });
   } else {
-    partyPlayers.forEach(
-      p => {
-        p.team = null;
-      }
-    );
+    partyPlayers.forEach(p => {
+      p.team = null;
+    });
   }
 
-  /*
-   * Posiciones iniciales.
-   */
-  partyPlayers.forEach(
-    (p, index) => {
-      p.x =
-        300 +
-        (index % 4) *
-          100;
+  partyPlayers.forEach((p, index) => {
+    p.x = 300 + (index % 4) * 100;
+    p.y = 300 + Math.floor(index / 4) * 100;
 
-      p.y =
-        300 +
-        Math.floor(
-          index / 4
-        ) *
-          100;
+    p.hp = 100;
+    p.shield = 50;
 
-      p.hp = 100;
+    p.ammo = p.maxAmmo;
 
-      p.shield = 50;
+    p.alive = true;
+    p.moving = false;
 
-      p.ammo =
-        p.maxAmmo;
+    p.kills = 0;
 
-      p.alive =
-        true;
+    p.selectedSlot = 1;
 
-      p.moving =
-        false;
+    p.emote = null;
+    p.emoteUntil = 0;
 
-      p.kills =
-        0;
+    p.pickaxeUntil = 0;
+  });
 
-      p.selectedSlot =
-        1;
-
-      p.emote =
-        null;
-
-      p.emoteUntil =
-        0;
-
-      p.pickaxeUntil =
-        0;
-    }
-  );
-
-  /*
-   * Limpiar balas.
-   */
-  for (
-    let i =
-      bullets.length - 1;
-    i >= 0;
-    i--
-  ) {
-    if (
-      bullets[i].partyCode ===
-      party.code
-    ) {
-      bullets.splice(
-        i,
-        1
-      );
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    if (bullets[i].partyCode === party.code) {
+      bullets.splice(i, 1);
     }
   }
 
-  /*
-   * Limpiar construcciones.
-   */
-  for (
-    let i =
-      walls.length - 1;
-    i >= 0;
-    i--
-  ) {
-    if (
-      walls[i].partyCode ===
-      party.code
-    ) {
-      walls.splice(
-        i,
-        1
-      );
+  for (let i = walls.length - 1; i >= 0; i--) {
+    if (walls[i].partyCode === party.code) {
+      walls.splice(i, 1);
     }
   }
 
-  /*
-   * Limpiar loot de esta partida.
-   */
-  for (
-    let i =
-      loot.length - 1;
-    i >= 0;
-    i--
-  ) {
-    if (
-      loot[i].partyCode ===
-      party.code
-    ) {
-      loot.splice(
-        i,
-        1
-      );
+  for (let i = loot.length - 1; i >= 0; i--) {
+    if (loot[i].partyCode === party.code) {
+      loot.splice(i, 1);
     }
   }
 
-  /*
-   * Mensaje que entiende el CLIENT.
-   *
-   * Antes el servidor mandaba:
-   * gameStarted
-   *
-   * pero el cliente esperaba:
-   * start
-   *
-   * Ahora mandamos start.
-   */
-  broadcastParty(
-    party.code,
-    {
-      type: "start",
+  broadcastParty(party.code, {
+    type: "start",
+    started: true
+  });
 
-      started: true,
+  broadcastParty(party.code, {
+    type: "gameStarted",
+    started: true
+  });
 
-      player: serializePlayer(
-        player
-      )
-    }
-  );
-
-  sendPartyState(
-    party
-  );
+  broadcastStateToParty(party.code);
 }
 
-function serializePlayer(
-  player
-) {
-  return {
-    id: player.id,
-    name: player.name,
+function updatePlayer(player, data) {
+  if (!player.alive) return;
 
-    x: player.x,
-    y: player.y,
+  const newX = Number(data.x);
+  const newY = Number(data.y);
+  const angle = Number(data.angle);
 
-    angle: player.angle,
-
-    hp: player.hp,
-    shield: player.shield,
-
-    weapon: player.weapon,
-
-    ammo: player.ammo,
-
-    kills: player.kills,
-
-    alive: player.alive,
-    moving: player.moving,
-
-    team: player.team,
-
-    selectedSlot:
-      player.selectedSlot,
-
-    emote:
-      player.emote,
-
-    emoteUntil:
-      player.emoteUntil,
-
-    pickaxeUntil:
-      player.pickaxeUntil
-  };
-}
-
-function sendPartyState(
-  party
-) {
-  const state =
-    getPartyState(
-      party
-    );
-
-  broadcastParty(
-    party.code,
-    {
-      type: "party",
-
-      code: state.code,
-
-      hostId: state.hostId,
-
-      started: state.started,
-
-      teamMode: state.teamMode,
-
-      players:
-        state.players,
-
-      party: state
-    }
-  );
-}
-
-function updatePlayer(
-  player,
-  data
-) {
-  if (!player.alive) {
-    return;
-  }
-
-  const newX =
-    Number(data.x);
-
-  const newY =
-    Number(data.y);
-
-  const angle =
-    Number(data.angle);
-
-  if (
-    !Number.isFinite(newX) ||
-    !Number.isFinite(newY)
-  ) {
+  if (!Number.isFinite(newX) || !Number.isFinite(newY)) {
     return;
   }
 
   if (
-    Math.abs(
-      newX - player.x
-    ) >
-      MAX_POSITION_DELTA ||
-    Math.abs(
-      newY - player.y
-    ) >
-      MAX_POSITION_DELTA
+    Math.abs(newX - player.x) > MAX_POSITION_DELTA ||
+    Math.abs(newY - player.y) > MAX_POSITION_DELTA
   ) {
     return;
   }
 
-  player.x =
-    Math.max(
-      0,
-      Math.min(
-        WORLD_SIZE,
-        newX
-      )
-    );
+  player.x = Math.max(
+    0,
+    Math.min(WORLD_SIZE, newX)
+  );
 
-  player.y =
-    Math.max(
-      0,
-      Math.min(
-        WORLD_SIZE,
-        newY
-      )
-    );
+  player.y = Math.max(
+    0,
+    Math.min(WORLD_SIZE, newY)
+  );
 
-  if (
-    Number.isFinite(angle)
-  ) {
-    player.angle =
-      angle;
+  if (Number.isFinite(angle)) {
+    player.angle = angle;
   }
 
-  player.moving =
-    !!data.moving;
+  player.moving = !!data.moving;
 }
 
 function shoot(player) {
@@ -866,41 +508,21 @@ function shoot(player) {
 
   player.ammo--;
 
-  player.selectedSlot =
-    1;
-
-  const angle =
-    Number(player.angle) || 0;
-
+  const angle = Number(player.angle) || 0;
   const speed = 900;
 
   bullets.push({
-    id:
-      nextBulletId++,
+    id: nextBulletId++,
 
-    ownerId:
-      player.id,
+    ownerId: player.id,
 
-    partyCode:
-      player.partyCode,
+    partyCode: player.partyCode,
 
-    x:
-      player.x +
-      Math.cos(angle) *
-        28,
+    x: player.x + Math.cos(angle) * 28,
+    y: player.y + Math.sin(angle) * 28,
 
-    y:
-      player.y +
-      Math.sin(angle) *
-        28,
-
-    vx:
-      Math.cos(angle) *
-      speed,
-
-    vy:
-      Math.sin(angle) *
-      speed,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
 
     damage: 20,
 
@@ -911,161 +533,103 @@ function shoot(player) {
 function reload(player) {
   if (!player.alive) return;
 
-  player.ammo =
-    player.maxAmmo;
+  player.ammo = player.maxAmmo;
 }
 
-function damagePlayer(
-  player,
-  damage,
-  attackerId
-) {
+function damagePlayer(player, damage, attackerId) {
   if (!player.alive) {
     return;
   }
 
-  let remainingDamage =
-    damage;
+  let remainingDamage = damage;
 
-  if (
-    player.shield > 0
-  ) {
-    const shieldDamage =
-      Math.min(
-        player.shield,
-        remainingDamage
-      );
-
-    player.shield -=
-      shieldDamage;
-
-    remainingDamage -=
-      shieldDamage;
-  }
-
-  if (
-    remainingDamage > 0
-  ) {
-    player.hp -=
-      remainingDamage;
-  }
-
-  if (
-    player.hp <= 0
-  ) {
-    killPlayer(
-      player,
-      attackerId
+  if (player.shield > 0) {
+    const shieldDamage = Math.min(
+      player.shield,
+      remainingDamage
     );
+
+    player.shield -= shieldDamage;
+    remainingDamage -= shieldDamage;
+  }
+
+  if (remainingDamage > 0) {
+    player.hp -= remainingDamage;
+  }
+
+  if (player.hp <= 0) {
+    killPlayer(player, attackerId);
   }
 }
 
-function killPlayer(
-  player,
-  attackerId
-) {
+function killPlayer(player, attackerId) {
   if (!player.alive) {
     return;
   }
 
   player.hp = 0;
-
   player.alive = false;
-
   player.moving = false;
 
   if (
     attackerId &&
     attackerId !== player.id
   ) {
-    const attacker =
-      players.get(
-        attackerId
-      );
+    const attacker = players.get(attackerId);
 
     if (
       attacker &&
-      attacker.partyCode ===
-        player.partyCode
+      attacker.partyCode === player.partyCode
     ) {
       attacker.kills++;
     }
   }
 
-  broadcastParty(
-    player.partyCode,
-    {
-      type: "kill",
+  broadcastParty(player.partyCode, {
+    type: "kill",
 
-      playerId:
-        player.id,
+    playerId: player.id,
 
-      attackerId:
-        attackerId || null,
+    attackerId: attackerId || null,
 
-      killerId:
-        attackerId || null
-    }
-  );
+    killerId: attackerId || null
+  });
 
-  checkWinner(
-    player.partyCode
-  );
+  checkWinner(player.partyCode);
 }
 
-function checkWinner(
-  partyCode
-) {
+function checkWinner(partyCode) {
   if (!partyCode) return;
 
-  const party =
-    parties.get(
-      partyCode
-    );
+  const party = parties.get(partyCode);
 
-  if (
-    !party ||
-    !party.started
-  ) {
+  if (!party || !party.started) {
     return;
   }
 
-  const partyPlayers =
-    [...party.players]
-      .map(id =>
-        players.get(id)
-      )
-      .filter(Boolean);
+  const partyPlayers = [...party.players]
+    .map(id => players.get(id))
+    .filter(Boolean);
 
-  const alivePlayers =
-    partyPlayers.filter(
-      p => p.alive
-    );
+  const alivePlayers = partyPlayers.filter(
+    player => player.alive
+  );
 
   if (
     alivePlayers.length <= 1 &&
     partyPlayers.length > 1
   ) {
-    const winner =
-      alivePlayers[0] ||
-      null;
+    const winner = alivePlayers[0] || null;
 
-    broadcastParty(
-      partyCode,
-      {
-        type: "end",
+    broadcastParty(partyCode, {
+      type: "end",
 
-        winnerId:
-          winner
-            ? winner.id
-            : null,
+      winnerId: winner ? winner.id : null,
 
-        winnerName:
-          winner
-            ? winner.name
-            : "Nadie"
-      }
-    );
+      winnerName: winner
+        ? winner.name
+        : "Nadie"
+    });
   }
 }
 
@@ -1076,25 +640,14 @@ function segmentIntersectsRect(
   y2,
   rect
 ) {
-  const left =
-    rect.x;
+  const left = rect.x;
+  const right = rect.x + rect.width;
 
-  const right =
-    rect.x +
-    rect.width;
+  const top = rect.y;
+  const bottom = rect.y + rect.height;
 
-  const top =
-    rect.y;
-
-  const bottom =
-    rect.y +
-    rect.height;
-
-  const dx =
-    x2 - x1;
-
-  const dy =
-    y2 - y1;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
 
   if (
     x1 >= left &&
@@ -1131,19 +684,13 @@ function segmentIntersectsRect(
     bottom - y1
   ];
 
-  for (
-    let i = 0;
-    i < 4;
-    i++
-  ) {
+  for (let i = 0; i < 4; i++) {
     if (p[i] === 0) {
       if (q[i] < 0) {
         return false;
       }
     } else {
-      const r =
-        q[i] /
-        p[i];
+      const r = q[i] / p[i];
 
       if (p[i] < 0) {
         if (r > t1) {
@@ -1168,59 +715,32 @@ function segmentIntersectsRect(
   return true;
 }
 
-function updateBullets(
-  deltaMs
-) {
-  const delta =
-    deltaMs / 1000;
+function updateBullets(deltaMs) {
+  const delta = deltaMs / 1000;
 
-  for (
-    let i =
-      bullets.length - 1;
-    i >= 0;
-    i--
-  ) {
-    const bullet =
-      bullets[i];
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const bullet = bullets[i];
 
-    const oldX =
-      bullet.x;
-
-    const oldY =
-      bullet.y;
+    const oldX = bullet.x;
+    const oldY = bullet.y;
 
     const newX =
       oldX +
-      bullet.vx *
-        delta;
+      bullet.vx * delta;
 
     const newY =
       oldY +
-      bullet.vy *
-        delta;
+      bullet.vy * delta;
 
-    bullet.x =
-      newX;
+    bullet.x = newX;
+    bullet.y = newY;
 
-    bullet.y =
-      newY;
+    bullet.life -= deltaMs;
 
-    bullet.life -=
-      deltaMs;
+    let removeBullet = false;
 
-    let removeBullet =
-      false;
-
-    /*
-     * COLISIÓN CON CONSTRUCCIONES
-     */
-    for (
-      const wall of walls
-    ) {
-      if (
-        wall.partyCode !==
-        bullet.partyCode
-      ) {
+    for (const wall of walls) {
+      if (wall.partyCode !== bullet.partyCode) {
         continue;
       }
 
@@ -1239,55 +759,31 @@ function updateBullets(
     }
 
     if (removeBullet) {
-      bullets.splice(
-        i,
-        1
-      );
-
+      bullets.splice(i, 1);
       continue;
     }
 
-    /*
-     * COLISIÓN CON JUGADORES
-     */
-    for (
-      const player of
-        players.values()
-    ) {
+    for (const player of players.values()) {
       if (!player.alive) {
         continue;
       }
 
-      if (
-        player.id ===
-        bullet.ownerId
-      ) {
+      if (player.id === bullet.ownerId) {
         continue;
       }
 
-      if (
-        player.partyCode !==
-        bullet.partyCode
-      ) {
+      if (player.partyCode !== bullet.partyCode) {
         continue;
       }
 
-      const dx =
-        player.x -
-        bullet.x;
-
-      const dy =
-        player.y -
-        bullet.y;
+      const dx = player.x - bullet.x;
+      const dy = player.y - bullet.y;
 
       const distanceSquared =
         dx * dx +
         dy * dy;
 
-      if (
-        distanceSquared <=
-        22 * 22
-      ) {
+      if (distanceSquared <= 22 * 22) {
         damagePlayer(
           player,
           bullet.damage,
@@ -1295,7 +791,6 @@ function updateBullets(
         );
 
         removeBullet = true;
-
         break;
       }
     }
@@ -1304,11 +799,7 @@ function updateBullets(
       removeBullet ||
       bullet.life <= 0
     ) {
-      bullets.splice(
-        i,
-        1
-      );
-
+      bullets.splice(i, 1);
       continue;
     }
 
@@ -1318,10 +809,7 @@ function updateBullets(
       bullet.y < 0 ||
       bullet.y > WORLD_SIZE
     ) {
-      bullets.splice(
-        i,
-        1
-      );
+      bullets.splice(i, 1);
     }
   }
 }
@@ -1329,52 +817,42 @@ function updateBullets(
 function build(player) {
   if (!player.alive) return;
 
-  player.selectedSlot =
-    3;
+  player.selectedSlot = 3;
 
-  const angle =
-    Number(player.angle) || 0;
+  const angle = Number(player.angle) || 0;
 
   const width = 60;
   const height = 60;
-
   const distance = 70;
 
   let x =
     player.x +
-    Math.cos(angle) *
-      distance -
+    Math.cos(angle) * distance -
     width / 2;
 
   let y =
     player.y +
-    Math.sin(angle) *
-      distance -
+    Math.sin(angle) * distance -
     height / 2;
 
-  x =
-    Math.max(
-      0,
-      Math.min(
-        WORLD_SIZE -
-          width,
-        x
-      )
-    );
+  x = Math.max(
+    0,
+    Math.min(
+      WORLD_SIZE - width,
+      x
+    )
+  );
 
-  y =
-    Math.max(
-      0,
-      Math.min(
-        WORLD_SIZE -
-          height,
-        y
-      )
-    );
+  y = Math.max(
+    0,
+    Math.min(
+      WORLD_SIZE - height,
+      y
+    )
+  );
 
   const wall = {
-    id:
-      nextWallId++,
+    id: nextWallId++,
 
     x,
     y,
@@ -1382,72 +860,41 @@ function build(player) {
     width,
     height,
 
-    ownerId:
-      player.id,
+    ownerId: player.id,
 
-    partyCode:
-      player.partyCode
+    partyCode: player.partyCode
   };
 
-  walls.push(
-    wall
+  walls.push(wall);
+
+  const playerWalls = walls.filter(
+    w => w.ownerId === player.id
   );
 
-  const playerWalls =
-    walls.filter(
-      w =>
-        w.ownerId ===
-        player.id
-    );
-
-  if (
-    playerWalls.length >
-    20
-  ) {
-    const oldest =
-      playerWalls[0];
-
-    const index =
-      walls.indexOf(
-        oldest
-      );
+  if (playerWalls.length > 20) {
+    const oldest = playerWalls[0];
+    const index = walls.indexOf(oldest);
 
     if (index !== -1) {
-      walls.splice(
-        index,
-        1
-      );
+      walls.splice(index, 1);
     }
   }
 }
 
 function pickaxe(player) {
-  if (!player.alive) {
-    return;
-  }
+  if (!player.alive) return;
 
-  player.selectedSlot =
-    4;
+  player.selectedSlot = 4;
 
   player.pickaxeUntil =
-    Date.now() +
-    350;
+    Date.now() + 350;
 
   const range = 75;
 
-  for (
-    let i =
-      walls.length - 1;
-    i >= 0;
-    i--
-  ) {
-    const wall =
-      walls[i];
+  for (let i = walls.length - 1; i >= 0; i--) {
+    const wall = walls[i];
 
-    if (
-      wall.partyCode !==
-      player.partyCode
-    ) {
+    if (wall.partyCode !== player.partyCode) {
       continue;
     }
 
@@ -1473,92 +920,61 @@ function pickaxe(player) {
         dy * dy
       );
 
-    if (
-      distance <=
-      range
-    ) {
-      walls.splice(
-        i,
-        1
-      );
-
+    if (distance <= range) {
+      walls.splice(i, 1);
       break;
     }
   }
 }
 
-function pickup(
-  player,
-  lootId
-) {
+function pickup(player, lootId) {
   if (!player.alive) {
     return;
   }
 
-  /*
-   * El cliente actual puede mandar
-   * pickup sin ID.
-   *
-   * En ese caso recogemos el objeto
-   * más cercano.
-   */
   let index = -1;
 
   if (lootId != null) {
-    index =
-      loot.findIndex(
-        item =>
-          item.id ===
-            lootId &&
-          item.partyCode ===
-            player.partyCode
-      );
-  } else {
-    let bestDistance =
-      Infinity;
-
-    loot.forEach(
-      (item, i) => {
-        if (
-          item.partyCode !==
-          player.partyCode
-        ) {
-          return;
-        }
-
-        const dx =
-          item.x -
-          player.x;
-
-        const dy =
-          item.y -
-          player.y;
-
-        const distance =
-          dx * dx +
-          dy * dy;
-
-        if (
-          distance <
-            80 * 80 &&
-          distance <
-            bestDistance
-        ) {
-          bestDistance =
-            distance;
-
-          index = i;
-        }
-      }
+    index = loot.findIndex(
+      item =>
+        item.id === lootId &&
+        item.partyCode === player.partyCode
     );
+  } else {
+    let bestDistance = Infinity;
+
+    loot.forEach((item, i) => {
+      if (item.partyCode !== player.partyCode) {
+        return;
+      }
+
+      const dx =
+        item.x -
+        player.x;
+
+      const dy =
+        item.y -
+        player.y;
+
+      const distance =
+        dx * dx +
+        dy * dy;
+
+      if (
+        distance < 80 * 80 &&
+        distance < bestDistance
+      ) {
+        bestDistance = distance;
+        index = i;
+      }
+    });
   }
 
   if (index === -1) {
     return;
   }
 
-  const item =
-    loot[index];
+  const item = loot[index];
 
   const dx =
     item.x -
@@ -1570,770 +986,476 @@ function pickup(
 
   if (
     dx * dx +
-      dy * dy >
+    dy * dy >
     80 * 80
   ) {
     return;
   }
 
-  if (
-    item.type ===
-    "ammo"
-  ) {
-    player.ammo =
-      Math.min(
-        player.maxAmmo,
-        player.ammo +
-          (item.amount ||
-            10)
-      );
+  if (item.type === "ammo") {
+    player.ammo = Math.min(
+      player.maxAmmo,
+      player.ammo + (item.amount || 10)
+    );
   }
 
-  if (
-    item.type ===
-    "shield"
-  ) {
-    player.shield =
-      Math.min(
-        100,
-        player.shield +
-          (item.amount ||
-            25)
-      );
+  if (item.type === "shield") {
+    player.shield = Math.min(
+      100,
+      player.shield + (item.amount || 25)
+    );
   }
 
-  if (
-    item.type ===
-    "health"
-  ) {
-    player.hp =
-      Math.min(
-        100,
-        player.hp +
-          (item.amount ||
-            25)
-      );
+  if (item.type === "health") {
+    player.hp = Math.min(
+      100,
+      player.hp + (item.amount || 25)
+    );
   }
 
-  loot.splice(
-    index,
-    1
-  );
+  loot.splice(index, 1);
 }
 
-function emote(
-  player,
-  value
-) {
+function emote(player, value) {
   if (!player.alive) {
     return;
   }
 
-  value =
-    String(
-      value || ""
-    );
+  value = String(value || "");
 
-  if (
-    !EMOTES.has(value)
-  ) {
+  if (!EMOTES.has(value)) {
     return;
   }
 
-  player.emote =
-    value;
+  player.emote = value;
 
   player.emoteUntil =
-    Date.now() +
-    2000;
+    Date.now() + 2000;
 
-  /*
-   * Mandamos los dos nombres
-   * para máxima compatibilidad.
-   */
-  broadcastParty(
-    player.partyCode,
-    {
-      type: "emote",
+  broadcastParty(player.partyCode, {
+    type: "emote",
 
-      id:
-        player.id,
+    id: player.id,
 
-      playerId:
-        player.id,
+    playerId: player.id,
 
-      emote:
-        value
-    }
-  );
+    emote: value
+  });
 }
 
-function createState(
-  partyCode
-) {
-  const now =
-    Date.now();
+function createState(partyCode) {
+  const now = Date.now();
 
-  const statePlayers =
-    [];
+  const statePlayers = [];
 
-  for (
-    const player of
-      players.values()
-  ) {
-    if (
-      player.partyCode !==
-      partyCode
-    ) {
+  for (const player of players.values()) {
+    if (player.partyCode !== partyCode) {
       continue;
     }
 
     if (
       player.emoteUntil &&
-      player.emoteUntil <
-        now
+      player.emoteUntil < now
     ) {
-      player.emote =
-        null;
-
-      player.emoteUntil =
-        0;
+      player.emote = null;
+      player.emoteUntil = 0;
     }
 
     statePlayers.push(
-      serializePlayer(
-        player
-      )
+      serializePlayer(player)
     );
   }
 
   return {
     type: "state",
 
-    players:
-      statePlayers,
+    players: statePlayers,
 
-    bullets:
-      bullets
-        .filter(
-          b =>
-            b.partyCode ===
-            partyCode
-        )
-        .map(b => ({
-          id: b.id,
-          ownerId:
-            b.ownerId,
-          x: b.x,
-          y: b.y
-        })),
+    bullets: bullets
+      .filter(
+        bullet =>
+          bullet.partyCode === partyCode
+      )
+      .map(bullet => ({
+        id: bullet.id,
+        ownerId: bullet.ownerId,
+        x: bullet.x,
+        y: bullet.y
+      })),
 
-    loot:
-      loot.filter(
-        item =>
-          item.partyCode ===
-          partyCode
-      ),
+    loot: loot.filter(
+      item =>
+        item.partyCode === partyCode
+    ),
 
-    walls:
-      walls
-        .filter(
-          w =>
-            w.partyCode ===
-            partyCode
-        )
-        .map(w => ({
-          id: w.id,
-          x: w.x,
-          y: w.y,
-          width:
-            w.width,
-          height:
-            w.height,
-          ownerId:
-            w.ownerId
-        }))
+    walls: walls
+      .filter(
+        wall =>
+          wall.partyCode === partyCode
+      )
+      .map(wall => ({
+        id: wall.id,
+
+        x: wall.x,
+        y: wall.y,
+
+        width: wall.width,
+        height: wall.height,
+
+        ownerId: wall.ownerId
+      }))
   };
 }
 
-function broadcastStateToParty(
-  partyCode
-) {
+function broadcastStateToParty(partyCode) {
   broadcastParty(
     partyCode,
-    createState(
-      partyCode
-    )
+    createState(partyCode)
   );
 }
 
 function broadcastStates() {
-  for (
-    const party of
-      parties.values()
-  ) {
+  for (const party of parties.values()) {
     if (!party.started) {
       continue;
     }
 
-    broadcastStateToParty(
-      party.code
-    );
+    broadcastStateToParty(party.code);
   }
 }
 
-wss.on(
-  "connection",
-  ws => {
-    let player = null;
-
-    ws.on(
-      "message",
-      rawMessage => {
-        let data;
-
-        try {
-          data =
-            JSON.parse(
-              rawMessage.toString()
-            );
-        } catch {
-          return;
-        }
-
-        if (
-          !data ||
-          typeof data.type !==
-            "string"
-        ) {
-          return;
-        }
-
-        /*
-         * CREATE PLAYER
-         */
-        if (
-          data.type ===
-          "createPlayer"
-        ) {
-          if (player) {
-            return;
-          }
-
-          player =
-            createPlayer(
-              ws,
-              data.name
-            );
-
-          return;
-        }
-
-        /*
-         * CREATE PARTY
-         *
-         * AHORA CREA EL JUGADOR
-         * AUTOMÁTICAMENTE.
-         */
-        if (
-          data.type ===
-          "createParty"
-        ) {
-          player =
-            ensurePlayer(
-              ws,
-              data.name
-            );
-
-          createParty(
-            player,
-            data.teamMode
-          );
-
-          return;
-        }
-
-        /*
-         * JOIN PARTY
-         */
-        if (
-          data.type ===
-          "joinParty"
-        ) {
-          player =
-            ensurePlayer(
-              ws,
-              data.name
-            );
-
-          joinParty(
-            player,
-            data.code
-          );
-
-          return;
-        }
-
-        /*
-         * READY
-         */
-        if (
-          data.type ===
-          "ready"
-        ) {
-          if (!player) {
-            player =
-              ensurePlayer(
-                ws,
-                data.name
-              );
-          }
-
-          setReady(
-            player,
-            data.ready !== false
-          );
-
-          return;
-        }
-
-        /*
-         * START
-         */
-        if (
-          data.type ===
-          "start"
-        ) {
-          if (!player) {
-            player =
-              ensurePlayer(
-                ws,
-                data.name
-              );
-          }
-
-          startParty(
-            player
-          );
-
-          return;
-        }
-
-        /*
-         * LEAVE PARTY
-         */
-        if (
-          data.type ===
-          "leaveParty"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          const oldPartyCode =
-            player.partyCode;
-
-          removePlayerFromParty(
-            player
-          );
-
-          send(
-            ws,
-            {
-              type:
-                "leftParty"
-            }
-          );
-
-          if (oldPartyCode) {
-            const party =
-              parties.get(
-                oldPartyCode
-              );
-
-            if (party) {
-              sendPartyState(
-                party
-              );
-            }
-          }
-
-          return;
-        }
-
-        /*
-         * UPDATE
-         */
-        if (
-          data.type ===
-          "update"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          updatePlayer(
-            player,
-            data
-          );
-
-          return;
-        }
-
-        /*
-         * SHOOT
-         */
-        if (
-          data.type ===
-          "shoot"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          if (
-            Number.isFinite(
-              Number(
-                data.angle
-              )
-            )
-          ) {
-            player.angle =
-              Number(
-                data.angle
-              );
-          }
-
-          shoot(
-            player
-          );
-
-          return;
-        }
-
-        /*
-         * RELOAD
-         */
-        if (
-          data.type ===
-          "reload"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          reload(
-            player
-          );
-
-          return;
-        }
-
-        /*
-         * SELECT SLOT
-         */
-        if (
-          data.type ===
-          "selectSlot"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          const slot =
-            Number(
-              data.slot
-            );
-
-          if (
-            Number.isInteger(
-              slot
-            ) &&
-            slot >= 1 &&
-            slot <= 4
-          ) {
-            player.selectedSlot =
-              slot;
-          }
-
-          return;
-        }
-
-        /*
-         * BUILD
-         */
-        if (
-          data.type ===
-          "build"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          if (
-            Number.isFinite(
-              Number(
-                data.angle
-              )
-            )
-          ) {
-            player.angle =
-              Number(
-                data.angle
-              );
-          }
-
-          build(
-            player
-          );
-
-          return;
-        }
-
-        /*
-         * PICKAXE
-         */
-        if (
-          data.type ===
-          "pickaxe"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          if (
-            Number.isFinite(
-              Number(
-                data.angle
-              )
-            )
-          ) {
-            player.angle =
-              Number(
-                data.angle
-              );
-          }
-
-          pickaxe(
-            player
-          );
-
-          return;
-        }
-
-        /*
-         * PICKUP
-         */
-        if (
-          data.type ===
-          "pickup"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          pickup(
-            player,
-            data.id
-          );
-
-          return;
-        }
-
-        /*
-         * CHAT
-         */
-        if (
-          data.type ===
-          "chat"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          const message =
-            String(
-              data.message ||
-                ""
-            )
-              .trim()
-              .substring(
-                0,
-                200
-              );
-
-          if (!message) {
-            return;
-          }
-
-          broadcastParty(
-            player.partyCode,
-            {
-              type:
-                "chat",
-
-              playerId:
-                player.id,
-
-              name:
-                player.name,
-
-              message
-            }
-          );
-
-          return;
-        }
-
-        /*
-         * EMOTE
-         */
-        if (
-          data.type ===
-          "emote"
-        ) {
-          if (!player) {
-            return;
-          }
-
-          emote(
-            player,
-            data.emote
-          );
-
-          return;
-        }
-
-        /*
-         * PING
-         */
-        if (
-          data.type ===
-          "ping"
-        ) {
-          send(
-            ws,
-            {
-              type:
-                "pong",
-
-              clientTime:
-                data.clientTime
-            }
-          );
-
-          return;
-        }
-      }
-    );
-
-    ws.on(
-      "close",
-      () => {
-        if (!player) {
-          return;
-        }
-
-        const partyCode =
-          player.partyCode;
-
-        for (
-          let i =
-            bullets.length - 1;
-          i >= 0;
-          i--
-        ) {
-          if (
-            bullets[i]
-              .ownerId ===
-            player.id
-          ) {
-            bullets.splice(
-              i,
-              1
-            );
-          }
-        }
-
-        for (
-          let i =
-            walls.length - 1;
-          i >= 0;
-          i--
-        ) {
-          if (
-            walls[i]
-              .ownerId ===
-            player.id
-          ) {
-            walls.splice(
-              i,
-              1
-            );
-          }
-        }
-
-        removePlayerFromParty(
-          player
+wss.on("connection", ws => {
+  let player = null;
+
+  ws.on("message", rawMessage => {
+    let data;
+
+    try {
+      data = JSON.parse(
+        rawMessage.toString()
+      );
+    } catch (error) {
+      return;
+    }
+
+    if (
+      !data ||
+      typeof data.type !== "string"
+    ) {
+      return;
+    }
+
+    if (data.type === "createPlayer") {
+      if (!player) {
+        player = ensurePlayer(
+          ws,
+          data.name
         );
-
-        players.delete(
-          player.id
-        );
-
-        if (partyCode) {
-          const party =
-            parties.get(
-              partyCode
-            );
-
-          if (party) {
-            sendPartyState(
-              party
-            );
-          }
-        }
       }
-    );
-  }
-);
 
-/*
- * GAME LOOP
- */
-let lastUpdate =
-  Date.now();
+      return;
+    }
 
-setInterval(
-  () => {
-    const now =
-      Date.now();
-
-    const deltaMs =
-      Math.min(
-        100,
-        now -
-          lastUpdate
+    if (data.type === "createParty") {
+      player = ensurePlayer(
+        ws,
+        data.name
       );
 
-    lastUpdate =
-      now;
+      createParty(
+        player,
+        data.teamMode
+      );
 
-    updateBullets(
-      deltaMs
-    );
+      return;
+    }
 
-    broadcastStates();
-  },
-  STATE_INTERVAL
-);
+    if (data.type === "joinParty") {
+      player = ensurePlayer(
+        ws,
+        data.name
+      );
 
-server.listen(
-  PORT,
-  () => {
-    console.log(
-      `Pixel Royale server running on port ${PORT}`
-    );
-  }
-);
+      joinParty(
+        player,
+        data.code
+      );
+
+      return;
+    }
+
+    if (data.type === "ready") {
+      player = player || ensurePlayer(
+        ws,
+        data.name
+      );
+
+      setReady(
+        player,
+        data.ready !== false
+      );
+
+      return;
+    }
+
+    if (data.type === "start") {
+      player = player || ensurePlayer(
+        ws,
+        data.name
+      );
+
+      startParty(player);
+
+      return;
+    }
+
+    if (data.type === "leaveParty") {
+      if (!player) {
+        return;
+      }
+
+      const oldPartyCode =
+        player.partyCode;
+
+      removePlayerFromParty(player);
+
+      send(ws, {
+        type: "leftParty"
+      });
+
+      if (oldPartyCode) {
+        const party =
+          parties.get(oldPartyCode);
+
+        if (party) {
+          sendPartyState(party);
+        }
+      }
+
+      return;
+    }
+
+    if (data.type === "update") {
+      if (!player) {
+        return;
+      }
+
+      updatePlayer(
+        player,
+        data
+      );
+
+      return;
+    }
+
+    if (data.type === "shoot") {
+      if (!player) {
+        return;
+      }
+
+      if (
+        Number.isFinite(
+          Number(data.angle)
+        )
+      ) {
+        player.angle =
+          Number(data.angle);
+      }
+
+      shoot(player);
+
+      return;
+    }
+
+    if (data.type === "reload") {
+      if (!player) {
+        return;
+      }
+
+      reload(player);
+
+      return;
+    }
+
+    if (data.type === "selectSlot") {
+      if (!player) {
+        return;
+      }
+
+      const slot =
+        Number(data.slot);
+
+      if (
+        Number.isInteger(slot) &&
+        slot >= 1 &&
+        slot <= 4
+      ) {
+        player.selectedSlot = slot;
+      }
+
+      return;
+    }
+
+    if (data.type === "build") {
+      if (!player) {
+        return;
+      }
+
+      if (
+        Number.isFinite(
+          Number(data.angle)
+        )
+      ) {
+        player.angle =
+          Number(data.angle);
+      }
+
+      build(player);
+
+      return;
+    }
+
+    if (data.type === "pickaxe") {
+      if (!player) {
+        return;
+      }
+
+      if (
+        Number.isFinite(
+          Number(data.angle)
+        )
+      ) {
+        player.angle =
+          Number(data.angle);
+      }
+
+      pickaxe(player);
+
+      return;
+    }
+
+    if (data.type === "pickup") {
+      if (!player) {
+        return;
+      }
+
+      pickup(
+        player,
+        data.id
+      );
+
+      return;
+    }
+
+    if (data.type === "chat") {
+      if (!player) {
+        return;
+      }
+
+      const message = String(
+        data.message || ""
+      )
+        .trim()
+        .substring(0, 200);
+
+      if (!message) {
+        return;
+      }
+
+      broadcastParty(
+        player.partyCode,
+        {
+          type: "chat",
+
+          playerId: player.id,
+
+          name: player.name,
+
+          message
+        }
+      );
+
+      return;
+    }
+
+    if (data.type === "emote") {
+      if (!player) {
+        return;
+      }
+
+      emote(
+        player,
+        data.emote
+      );
+
+      return;
+    }
+
+    if (data.type === "ping") {
+      send(ws, {
+        type: "pong",
+        clientTime: data.clientTime
+      });
+
+      return;
+    }
+  });
+
+  ws.on("close", () => {
+    if (!player) {
+      return;
+    }
+
+    const partyCode =
+      player.partyCode;
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      if (bullets[i].ownerId === player.id) {
+        bullets.splice(i, 1);
+      }
+    }
+
+    for (let i = walls.length - 1; i >= 0; i--) {
+      if (walls[i].ownerId === player.id) {
+        walls.splice(i, 1);
+      }
+    }
+
+    removePlayerFromParty(player);
+
+    players.delete(player.id);
+
+    if (partyCode) {
+      const party =
+        parties.get(partyCode);
+
+      if (party) {
+        sendPartyState(party);
+      }
+    }
+  });
+});
+
+let lastUpdate = Date.now();
+
+setInterval(() => {
+  const now = Date.now();
+
+  const deltaMs = Math.min(
+    100,
+    now - lastUpdate
+  );
+
+  lastUpdate = now;
+
+  updateBullets(deltaMs);
+
+  broadcastStates();
+}, STATE_INTERVAL);
+
+server.listen(PORT, () => {
+  console.log(
+    `Pixel Royale server running on port ${PORT}`
+  );
+});
 ```
