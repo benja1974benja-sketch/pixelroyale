@@ -1,5836 +1,1876 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+"use strict";
 
-<title>PixelRoyale</title>
-
-<style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-html,
-body{
-    width:100%;
-    height:100%;
-}
-
-body{
-    background:#080b12;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    font-family:Arial,Segoe UI,sans-serif;
-    color:white;
-}
-
-#game-container{
-    position:relative;
-    width:min(900px,100vw);
-    height:min(600px,100vh);
-    overflow:hidden;
-    border-radius:8px;
-    box-shadow:
-        0 0 40px rgba(0,198,255,.25);
-}
-
-#game{
-    display:block;
-    width:100%;
-    height:100%;
-    background:#17212b;
-    image-rendering:auto;
-}
-
-#ui{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-}
-
-button,
-input{
-    font-family:inherit;
-}
-
-button{
-    border:0;
-    padding:9px 15px;
-    border-radius:7px;
-    color:white;
-    background:#009fe3;
-    cursor:pointer;
-    font-weight:700;
-}
-
-button:hover{
-    filter:brightness(1.15);
-}
-
-button.secondary{
-    background:#263442;
-}
-
-button.ready{
-    background:#2ecc71;
-}
-
-button.danger{
-    background:#e74c3c;
-}
-
-input{
-    background:#101720;
-    border:1px solid #334454;
-    color:white;
-    border-radius:7px;
-    padding:9px 12px;
-    outline:none;
-}
-
-input:focus{
-    border-color:#00c6ff;
-}
-
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const WebSocket = require("ws");
 
 /* =========================================================
-   HUD
+   CONFIG
 ========================================================= */
 
-#hud{
-    position:absolute;
-    top:10px;
-    left:10px;
-    display:flex;
-    flex-direction:column;
-    gap:5px;
-}
+const PORT =
+  process.env.PORT || 3000;
 
-.hud-box{
-    background:rgba(0,0,0,.72);
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:7px;
-    padding:6px 10px;
-    font-size:13px;
-}
+const WORLD_SIZE = 2400;
 
-#health-bar-container,
-#shield-bar-container{
-    width:170px;
-    height:12px;
-    background:#15191f;
-    border-radius:4px;
-    overflow:hidden;
-    margin-bottom:3px;
-}
+const MAX_POSITION_DELTA = 30;
 
-#health-bar{
-    width:100%;
-    height:100%;
-    background:
-        linear-gradient(
-            90deg,
-            #e74c3c,
-            #f39c12
+const STATE_INTERVAL = 50;
+
+/* =========================================================
+   HTTP SERVER
+========================================================= */
+
+const server =
+  http.createServer((req,res) => {
+
+    let filePath;
+
+    if(
+      req.url === "/" ||
+      req.url === "/index.html"
+    ){
+
+      filePath =
+        path.join(
+          __dirname,
+          "client.html"
         );
-}
 
-#shield-bar{
-    width:0;
-    height:100%;
-    background:
-        linear-gradient(
-            90deg,
-            #3498db,
-            #00c6ff
+    }else{
+
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+
+    fs.readFile(
+      filePath,
+      (err,data) => {
+
+        if(err){
+
+          res.writeHead(500);
+          res.end(
+            "Error loading client.html"
+          );
+
+          return;
+        }
+
+        res.writeHead(
+          200,
+          {
+            "Content-Type":
+              "text/html; charset=utf-8"
+          }
         );
-}
 
-
-/* =========================================================
-   PLAYER LIST
-========================================================= */
-
-#player-list{
-    position:absolute;
-    top:10px;
-    right:10px;
-    min-width:165px;
-    max-height:220px;
-    overflow:auto;
-
-    padding:9px 12px;
-
-    background:rgba(0,0,0,.72);
-
-    border:1px solid rgba(255,255,255,.12);
-
-    border-radius:8px;
-
-    font-size:12px;
-}
-
-#player-list h3{
-    color:#00c6ff;
-    font-size:12px;
-    margin-bottom:6px;
-}
-
-.plist-item{
-    padding:2px 0;
-}
-
-.plist-item.me{
-    color:#2ecc71;
-    font-weight:bold;
-}
-
-.plist-item.dead{
-    color:#777;
-    text-decoration:line-through;
-}
-
-.plist-item.squad{
-    color:#f1c40f;
-}
-
+        res.end(data);
+      }
+    );
+  });
 
 /* =========================================================
-   CHAT
+   WEBSOCKET
 ========================================================= */
 
-#chat-box{
-    position:absolute;
-    left:10px;
-    bottom:95px;
-    width:300px;
-    max-height:120px;
-    overflow:hidden;
-    font-size:12px;
-}
-
-.chat-msg{
-    background:rgba(0,0,0,.55);
-    border-radius:4px;
-    padding:4px 7px;
-    margin-bottom:3px;
-    word-break:break-word;
-}
-
-#chat-input-container{
-    position:absolute;
-    left:10px;
-    bottom:60px;
-    display:none;
-    pointer-events:auto;
-}
-
-#chat-input{
-    width:300px;
-}
-
+const wss =
+  new WebSocket.Server({
+    server
+  });
 
 /* =========================================================
-   HOTBAR
+   DATA
 ========================================================= */
 
-#hotbar{
-    position:absolute;
-    bottom:10px;
-    left:50%;
-    transform:translateX(-50%);
-    display:flex;
-    gap:6px;
-    pointer-events:auto;
+const players =
+  new Map();
+
+const parties =
+  new Map();
+
+let nextPlayerId = 1;
+
+let nextBulletId = 1;
+
+let nextWallId = 1;
+
+/* =========================================================
+   UTIL
+========================================================= */
+
+function randomId(prefix){
+
+  return (
+    prefix +
+    Math.random()
+      .toString(36)
+      .slice(2,9)
+  );
 }
 
-.slot{
-    position:relative;
+function randomSpawn(){
 
-    width:65px;
-    height:62px;
+  return {
+    x:
+      100 +
+      Math.random() *
+      (WORLD_SIZE - 200),
 
-    background:rgba(0,0,0,.78);
-
-    border:
-        2px solid
-        rgba(255,255,255,.18);
-
-    border-radius:8px;
-
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-
-    font-size:24px;
-
-    cursor:pointer;
+    y:
+      100 +
+      Math.random() *
+      (WORLD_SIZE - 200)
+  };
 }
 
-.slot.active{
-    border-color:#00c6ff;
+function clamp(value,min,max){
 
-    box-shadow:
-        0 0 12px
-        rgba(0,198,255,.5);
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      value
+    )
+  );
 }
 
-.slot .key{
-    position:absolute;
-    top:2px;
-    left:4px;
-    font-size:10px;
-    color:#aaa;
+function distance(
+  x1,
+  y1,
+  x2,
+  y2
+){
+
+  return Math.hypot(
+    x2 - x1,
+    y2 - y1
+  );
 }
 
-.wname{
-    font-size:8px;
-    color:#ccc;
+/* =========================================================
+   CREATE PLAYER
+========================================================= */
+
+function createPlayer(ws,name){
+
+  const spawn =
+    randomSpawn();
+
+  const player = {
+
+    id:
+      "p" +
+      nextPlayerId++,
+
+    ws,
+
+    name:
+      String(name || "Player")
+        .slice(0,16),
+
+    x:
+      spawn.x,
+
+    y:
+      spawn.y,
+
+    angle:0,
+
+    hp:100,
+
+    shield:0,
+
+    weapon:"rifle",
+
+    ammo:30,
+
+    maxAmmo:30,
+
+    kills:0,
+
+    alive:true,
+
+    moving:false,
+
+    team:null,
+
+    partyCode:null,
+
+    ready:false,
+
+    isHost:false
+  };
+
+  players.set(
+    ws,
+    player
+  );
+
+  return player;
 }
 
+/* =========================================================
+   SEND
+========================================================= */
+
+function send(ws,data){
+
+  if(
+    ws &&
+    ws.readyState ===
+    WebSocket.OPEN
+  ){
+
+    try{
+      ws.send(
+        JSON.stringify(data)
+      );
+    }catch(e){}
+  }
+}
+
+/* =========================================================
+   PARTY CODE
+========================================================= */
+
+function generatePartyCode(){
+
+  let code;
+
+  do{
+
+    code =
+      Math.random()
+        .toString(36)
+        .substring(2,8)
+        .toUpperCase();
+
+  }while(parties.has(code));
+
+  return code;
+}
+
+/* =========================================================
+   CREATE PARTY
+========================================================= */
+
+function createParty(
+  player,
+  teamMode
+){
+
+  const code =
+    generatePartyCode();
+
+  const party = {
+
+    code,
+
+    hostId:
+      player.id,
+
+    teamMode:
+      teamMode || "solo",
+
+    started:false,
+
+    players:
+      new Set()
+  };
+
+  party.players.add(
+    player.id
+  );
+
+  parties.set(
+    code,
+    party
+  );
+
+  player.partyCode =
+    code;
+
+  player.isHost =
+    true;
+
+  player.ready =
+    true;
+
+  sendPartyState(
+    party
+  );
+
+  return party;
+}
+
+/* =========================================================
+   FIND PLAYER BY ID
+========================================================= */
+
+function getPlayerById(id){
+
+  for(
+    const player of players.values()
+  ){
+
+    if(player.id === id){
+      return player;
+    }
+  }
+
+  return null;
+}
+
+/* =========================================================
+   JOIN PARTY
+========================================================= */
+
+function joinParty(
+  player,
+  code
+){
+
+  const party =
+    parties.get(
+      String(code || "")
+        .toUpperCase()
+    );
+
+  if(!party){
+
+    send(player.ws,{
+      type:"error",
+      message:
+        "No existe esa partida."
+    });
+
+    return;
+  }
+
+  if(party.started){
+
+    send(player.ws,{
+      type:"error",
+      message:
+        "La partida ya empezó."
+    });
+
+    return;
+  }
+
+  if(party.players.size >= 16){
+
+    send(player.ws,{
+      type:"error",
+      message:
+        "La sala está llena."
+    });
+
+    return;
+  }
+
+  player.partyCode =
+    party.code;
+
+  player.ready =
+    false;
+
+  player.isHost =
+    false;
+
+  party.players.add(
+    player.id
+  );
+
+  sendPartyState(
+    party
+  );
+}
+
+/* =========================================================
+   PARTY STATE
+========================================================= */
+
+function sendPartyState(party){
+
+  if(!party) return;
+
+  const list = [];
+
+  party.players.forEach(
+    playerId => {
+
+      const p =
+        getPlayerById(
+          playerId
+        );
+
+      if(p){
+
+        list.push({
+          id:p.id,
+          name:p.name,
+          ready:p.ready
+        });
+      }
+    }
+  );
+
+  party.players.forEach(
+    playerId => {
+
+      const p =
+        getPlayerById(
+          playerId
+        );
+
+      if(!p) return;
+
+      send(p.ws,{
+        type:"party",
+        code:party.code,
+        hostId:party.hostId,
+        players:list
+      });
+    }
+  );
+}
+
+/* =========================================================
+   REMOVE FROM PARTY
+========================================================= */
+
+function removeFromParty(
+  player
+){
+
+  if(!player.partyCode){
+    return;
+  }
+
+  const party =
+    parties.get(
+      player.partyCode
+    );
+
+  if(!party){
+
+    player.partyCode =
+      null;
+
+    return;
+  }
+
+  party.players.delete(
+    player.id
+  );
+
+  player.partyCode =
+    null;
+
+  player.ready =
+    false;
+
+  player.isHost =
+    false;
+
+  if(
+    party.players.size === 0
+  ){
+
+    parties.delete(
+      party.code
+    );
+
+    return;
+  }
+
+  if(
+    party.hostId === player.id
+  ){
+
+    const next =
+      party.players.values()
+        .next()
+        .value;
+
+    party.hostId =
+      next || null;
+
+    const newHost =
+      getPlayerById(
+        party.hostId
+      );
+
+    if(newHost){
+      newHost.isHost = true;
+      newHost.ready = true;
+    }
+  }
+
+  sendPartyState(
+    party
+  );
+}
+
+/* =========================================================
+   READY
+========================================================= */
+
+function toggleReady(player){
+
+  player.ready =
+    !player.ready;
+
+  const party =
+    parties.get(
+      player.partyCode
+    );
+
+  if(party){
+
+    sendPartyState(
+      party
+    );
+  }
+}
+
+/* =========================================================
+   CAN START
+========================================================= */
+
+function canStart(party){
+
+  if(!party) return false;
+
+  if(
+    party.players.size < 1
+  ){
+    return false;
+  }
+
+  for(
+    const id of party.players
+  ){
+
+    const p =
+      getPlayerById(id);
+
+    if(
+      p &&
+      !p.ready
+    ){
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/* =========================================================
+   START PARTY
+========================================================= */
+
+function startParty(party){
+
+  if(!party) return;
+
+  if(
+    party.started
+  ){
+    return;
+  }
+
+  if(!canStart(party)){
+
+    const host =
+      getPlayerById(
+        party.hostId
+      );
+
+    if(host){
+
+      send(host.ws,{
+        type:"error",
+        message:
+          "Todos los jugadores deben estar listos."
+      });
+    }
+
+    return;
+  }
+
+  party.started =
+    true;
+
+  party.players.forEach(
+    id => {
+
+      const p =
+        getPlayerById(id);
+
+      if(!p) return;
+
+      p.alive = true;
+      p.hp = 100;
+      p.shield = 0;
+      p.ammo = p.maxAmmo;
+      p.kills = 0;
+
+      const spawn =
+        randomSpawn();
+
+      p.x = spawn.x;
+      p.y = spawn.y;
+
+      p.moving = false;
+
+      send(p.ws,{
+        type:"countdown",
+        value:3
+      });
+    }
+  );
+
+  setTimeout(() => {
+
+    party.players.forEach(
+      id => {
+
+        const p =
+          getPlayerById(id);
+
+        if(!p) return;
+
+        send(p.ws,{
+          type:"countdown",
+          value:2
+        });
+      }
+
+    );
+
+  },1000);
+
+  setTimeout(() => {
+
+    party.players.forEach(
+      id => {
+
+        const p =
+          getPlayerById(id);
+
+        if(!p) return;
+
+        send(p.ws,{
+          type:"countdown",
+          value:1
+        });
+      }
+
+    );
+
+  },2000);
+
+  setTimeout(() => {
+
+    party.players.forEach(
+      id => {
+
+        const p =
+          getPlayerById(id);
+
+        if(!p) return;
+
+        send(p.ws,{
+          type:"countdown",
+          value:0
+        });
+
+        send(p.ws,{
+          type:"start",
+          player:{
+            id:p.id,
+            name:p.name,
+            x:p.x,
+            y:p.y,
+            hp:p.hp,
+            shield:p.shield,
+            ammo:p.ammo,
+            weapon:p.weapon,
+            angle:p.angle,
+            alive:p.alive
+          }
+        });
+      }
+
+    );
+
+  },3000);
+}
+
+/* =========================================================
+   UPDATE PLAYER
+========================================================= */
+
+function updatePlayer(
+  player,
+  data
+){
+
+  if(!player) return;
+
+  if(
+    typeof data.x === "number" &&
+    typeof data.y === "number"
+  ){
+
+    const targetX =
+      clamp(
+        data.x,
+        30,
+        WORLD_SIZE - 30
+      );
+
+    const targetY =
+      clamp(
+        data.y,
+        30,
+        WORLD_SIZE - 30
+      );
+
+    const dx =
+      targetX - player.x;
+
+    const dy =
+      targetY - player.y;
+
+    const delta =
+      Math.hypot(dx,dy);
+
+    /*
+     * El cliente manda cada 40ms.
+     *
+     * Con 225 px/s:
+     *
+     * 225 × 0.04 = 9 px
+     *
+     * Permitimos hasta 30px por mensaje.
+     */
+
+    if(
+      delta <=
+      MAX_POSITION_DELTA
+    ){
+
+      player.x =
+        targetX;
+
+      player.y =
+        targetY;
+
+      player.moving =
+        delta > 0.1;
+    }
+  }
+
+  if(
+    typeof data.angle === "number" &&
+    Number.isFinite(data.angle)
+  ){
+
+    player.angle =
+      data.angle;
+  }
+}
+
+/* =========================================================
+   SHOOT
+========================================================= */
+
+function shoot(player){
+
+  if(
+    !player ||
+    !player.alive
+  ){
+    return;
+  }
+
+  if(
+    player.ammo <= 0
+  ){
+
+    send(player.ws,{
+      type:"error",
+      message:"Sin munición."
+    });
+
+    return;
+  }
+
+  player.ammo--;
+
+  const bulletSpeed =
+    900;
+
+  const bullet = {
+
+    id:
+      nextBulletId++,
+
+    ownerId:
+      player.id,
+
+    x:
+      player.x +
+      Math.cos(player.angle) *
+      28,
+
+    y:
+      player.y +
+      Math.sin(player.angle) *
+      28,
+
+    vx:
+      Math.cos(player.angle) *
+      bulletSpeed,
+
+    vy:
+      Math.sin(player.angle) *
+      bulletSpeed,
+
+    damage:
+      20,
+
+    life:
+      1000
+  };
+
+  bullets.push(
+    bullet
+  );
+}
+
+/* =========================================================
+   RELOAD
+========================================================= */
+
+function reload(player){
+
+  if(!player) return;
+
+  player.ammo =
+    player.maxAmmo;
+}
+
+/* =========================================================
+   BULLETS
+========================================================= */
+
+const bullets = [];
+
+function updateBullets(deltaMs){
+
+  const delta =
+    deltaMs / 1000;
+
+  for(
+    let i = bullets.length - 1;
+    i >= 0;
+    i--
+  ){
+
+    const b =
+      bullets[i];
+
+    b.x +=
+      b.vx * delta;
+
+    b.y +=
+      b.vy * delta;
+
+    b.life -=
+      deltaMs;
+
+    let remove = false;
+
+    if(
+      b.life <= 0 ||
+      b.x < 0 ||
+      b.y < 0 ||
+      b.x > WORLD_SIZE ||
+      b.y > WORLD_SIZE
+    ){
+
+      remove = true;
+    }
+
+    if(!remove){
+
+      for(
+        const player of players.values()
+      ){
+
+        if(
+          !player.alive ||
+          player.id === b.ownerId
+        ){
+          continue;
+        }
+
+        if(
+          distance(
+            b.x,
+            b.y,
+            player.x,
+            player.y
+          ) < 24
+        ){
+
+          damagePlayer(
+            player,
+            b.damage,
+            b.ownerId
+          );
+
+          remove = true;
+          break;
+        }
+      }
+    }
+
+    if(remove){
+      bullets.splice(i,1);
+    }
+  }
+}
+
+/* =========================================================
+   DAMAGE
+========================================================= */
+
+function damagePlayer(
+  player,
+  damage,
+  attackerId
+){
+
+  let remaining =
+    damage;
+
+  if(player.shield > 0){
+
+    const shieldDamage =
+      Math.min(
+        player.shield,
+        remaining
+      );
+
+    player.shield -=
+      shieldDamage;
+
+    remaining -=
+      shieldDamage;
+  }
+
+  if(remaining > 0){
+
+    player.hp -=
+      remaining;
+  }
+
+  if(
+    player.hp <= 0
+  ){
+
+    player.hp = 0;
+
+    killPlayer(
+      player,
+      attackerId
+    );
+  }
+}
+
+/* =========================================================
+   KILL
+========================================================= */
+
+function killPlayer(
+  player,
+  killerId
+){
+
+  if(!player.alive){
+    return;
+  }
+
+  player.alive =
+    false;
+
+  player.moving =
+    false;
+
+  const killer =
+    getPlayerById(
+      killerId
+    );
+
+  if(killer){
+
+    killer.kills++;
+
+    send(killer.ws,{
+      type:"kill",
+      killerId:killer.id,
+      victimId:player.id
+    });
+  }
+
+  checkWinner(
+    player.partyCode
+  );
+}
+
+/* =========================================================
+   WINNER
+========================================================= */
+
+function checkWinner(
+  partyCode
+){
+
+  const party =
+    parties.get(
+      partyCode
+    );
+
+  if(!party) return;
+
+  const alive = [];
+
+  party.players.forEach(
+    id => {
+
+      const p =
+        getPlayerById(id);
+
+      if(
+        p &&
+        p.alive
+      ){
+
+        alive.push(p);
+      }
+    }
+  );
+
+  if(
+    alive.length <= 1
+  ){
+
+    const winner =
+      alive[0];
+
+    party.players.forEach(
+      id => {
+
+        const p =
+          getPlayerById(id);
+
+        if(!p) return;
+
+        send(p.ws,{
+          type:"end",
+          winnerName:
+            winner
+              ? winner.name
+              : "Nadie"
+        });
+      }
+    );
+  }
+}
 
 /* =========================================================
    BUILD
 ========================================================= */
 
-#build-indicator{
-    position:absolute;
-    bottom:82px;
-    left:50%;
-    transform:translateX(-50%);
+const walls = [];
 
-    padding:7px 13px;
+function build(player){
 
-    background:rgba(0,0,0,.78);
+  if(!player) return;
 
-    border-radius:20px;
+  const distanceFromPlayer =
+    70;
 
-    font-size:12px;
+  const wall = {
 
-    opacity:0;
+    id:
+      nextWallId++,
 
-    transition:.2s;
-}
+    x:
+      player.x +
+      Math.cos(player.angle) *
+      distanceFromPlayer -
+      30,
 
-#build-indicator.active{
-    opacity:1;
-}
+    y:
+      player.y +
+      Math.sin(player.angle) *
+      distanceFromPlayer -
+      30,
 
+    width:60,
+    height:60,
 
-/* =========================================================
-   EMOTES
-========================================================= */
+    ownerId:
+      player.id
+  };
 
-#emote-bar{
-    position:absolute;
-    left:10px;
-    bottom:10px;
-
-    display:flex;
-    flex-wrap:wrap;
-    gap:4px;
-
-    width:235px;
-
-    pointer-events:auto;
-}
-
-.emote-btn{
-    width:38px;
-    height:38px;
-
-    padding:0;
-
-    border-radius:8px;
-
-    background:rgba(0,0,0,.76);
-
-    border:
-        1px solid
-        rgba(255,255,255,.18);
-
-    font-size:19px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-
-/* =========================================================
-   STORM
-========================================================= */
-
-#storm-warning{
-    position:absolute;
-
-    top:70px;
-    left:50%;
-
-    transform:translateX(-50%);
-
-    background:
-        rgba(190,40,50,.88);
-
-    padding:8px 18px;
-
-    border-radius:20px;
-
-    font-size:13px;
-
-    opacity:0;
-
-    transition:.25s;
-}
-
-#storm-warning.show{
-    opacity:1;
-}
-
-
-/* =========================================================
-   MINIMAPA
-========================================================= */
-
-#minimap{
-    position:absolute;
-
-    right:10px;
-    bottom:80px;
-
-    width:120px;
-    height:120px;
-
-    background:rgba(0,0,0,.65);
-
-    border:
-        1px solid
-        rgba(255,255,255,.18);
-
-    border-radius:8px;
-}
-
-
-/* =========================================================
-   STATUS / LOBBY
-========================================================= */
-
-#status{
-    position:absolute;
-    inset:0;
-
-    z-index:30;
-
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-
-    text-align:center;
-
-    background:
-        rgba(8,12,20,.95);
-
-    pointer-events:auto;
-}
-
-#status h2{
-    font-size:38px;
-    color:#00c6ff;
-
-    text-shadow:
-        0 0 25px
-        rgba(0,198,255,.5);
-}
-
-.sub{
-    color:#9ca9b5;
-    margin:7px 0 20px;
-    font-size:13px;
-}
-
-.lobby-section{
-    width:390px;
-    max-width:90%;
-}
-
-.party-row{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-wrap:wrap;
-    gap:7px;
-    margin:8px 0;
-}
-
-.lobby-players{
-    max-height:150px;
-    overflow:auto;
-
-    background:rgba(0,0,0,.35);
-
-    border-radius:8px;
-
-    padding:8px;
-
-    text-align:left;
-
-    margin:10px 0;
-}
-
-.lobby-players div{
-    padding:4px;
-    border-bottom:
-        1px solid
-        rgba(255,255,255,.06);
-}
-
-
-/* =========================================================
-   COUNTDOWN
-========================================================= */
-
-#countdown-overlay{
-    position:absolute;
-    inset:0;
-
-    z-index:25;
-
-    display:none;
-
-    align-items:center;
-    justify-content:center;
-
-    background:
-        rgba(0,0,0,.48);
-
-    font-size:75px;
-    font-weight:900;
-
-    color:#00c6ff;
-
-    text-shadow:
-        0 0 30px
-        #00c6ff;
-}
-
-
-/* =========================================================
-   CONNECTION
-========================================================= */
-
-#connection-status{
-    position:absolute;
-
-    right:10px;
-    bottom:10px;
-
-    background:rgba(0,0,0,.6);
-
-    padding:4px 9px;
-
-    border-radius:12px;
-
-    font-size:10px;
-
-    color:#e74c3c;
-}
-
-#connection-status.connected{
-    color:#2ecc71;
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-#mobile-controls{
-    position:absolute;
-    inset:0;
-    display:none;
-    pointer-events:none;
-}
-
-.joystick{
-    position:absolute;
-
-    width:110px;
-    height:110px;
-
-    border-radius:50%;
-
-    background:
-        rgba(255,255,255,.08);
-
-    border:
-        2px solid
-        rgba(255,255,255,.15);
-
-    pointer-events:auto;
-}
-
-#move-stick{
-    left:20px;
-    bottom:125px;
-}
-
-#aim-stick{
-    right:20px;
-    bottom:125px;
-}
-
-.joy-knob{
-    position:absolute;
-
-    width:44px;
-    height:44px;
-
-    left:33px;
-    top:33px;
-
-    border-radius:50%;
-
-    background:
-        rgba(0,198,255,.55);
-
-    border:
-        2px solid
-        rgba(255,255,255,.35);
-}
-
-.mobile-action{
-    position:absolute;
-
-    width:54px;
-    height:54px;
-
-    border-radius:50%;
-
-    background:
-        rgba(0,0,0,.7);
-
-    border:
-        2px solid
-        rgba(255,255,255,.2);
-
-    pointer-events:auto;
-
-    font-size:21px;
-}
-
-#mobile-fire{
-    right:145px;
-    bottom:55px;
-}
-
-#mobile-pickup{
-    right:75px;
-    bottom:125px;
-}
-
-#mobile-build{
-    right:75px;
-    bottom:55px;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-
-@media(max-width:700px){
-
-    #game-container{
-        width:100vw;
-        height:100vh;
-        border-radius:0;
-    }
-
-    #game{
-        width:100%;
-        height:100%;
-    }
-
-    #player-list{
-        min-width:125px;
-        max-width:140px;
-        font-size:10px;
-    }
-
-    #chat-box{
-        width:210px;
-    }
-
-    #chat-input{
-        width:210px;
-    }
-
-    #emote-bar{
-        width:190px;
-    }
-
-    .emote-btn{
-        width:31px;
-        height:31px;
-        font-size:16px;
-    }
-
-    #mobile-controls{
-        display:block;
-    }
-}
-
-</style>
-</head>
-
-
-<body>
-
-<div id="game-container">
-
-<canvas
-    id="game"
-    width="900"
-    height="600">
-</canvas>
-
-
-<div id="ui">
-
-
-<!-- ======================================================
-     HUD
-====================================================== -->
-
-<div id="hud" style="display:none">
-
-    <div class="hud-box">
-
-        <div
-            style="
-                font-size:10px;
-                color:#aaa;
-            ">
-            VIDA
-        </div>
-
-        <div id="health-bar-container">
-            <div id="health-bar"></div>
-        </div>
-
-        <div
-            style="
-                font-size:10px;
-                color:#5dade2;
-            ">
-            ESCUDO
-        </div>
-
-        <div id="shield-bar-container">
-            <div id="shield-bar"></div>
-        </div>
-
-    </div>
-
-
-    <div
-        class="hud-box"
-        id="materials">
-        🪵 Materiales: 50 / 200
-    </div>
-
-
-    <div
-        class="hud-box"
-        id="kills">
-        💀 Eliminaciones: 0
-    </div>
-
-
-    <div
-        class="hud-box"
-        id="weapon-info">
-        🔫 Pistola
-    </div>
-
-</div>
-
-
-<!-- ======================================================
-     PLAYER LIST
-====================================================== -->
-
-<div
-    id="player-list"
-    style="display:none">
-
-    <h3>Jugadores</h3>
-
-    <div id="plist-content"></div>
-
-</div>
-
-
-<!-- ======================================================
-     CHAT
-====================================================== -->
-
-<div id="chat-box"></div>
-
-<div id="chat-input-container">
-
-    <input
-        id="chat-input"
-        type="text"
-        maxlength="100"
-        placeholder="Escribe un mensaje...">
-
-</div>
-
-
-<!-- ======================================================
-     BUILD
-====================================================== -->
-
-<div id="build-indicator">
-    🧱 Construcción · 10 materiales · Espacio
-</div>
-
-
-<!-- ======================================================
-     HOTBAR
-====================================================== -->
-
-<div
-    id="hotbar"
-    style="display:none">
-
-    <div
-        class="slot"
-        id="slot1"
-        onclick="setSlot(1)">
-
-        <span class="key">1</span>
-
-        ⛏️
-
-        <div class="wname">
-            Pico
-        </div>
-
-    </div>
-
-
-    <div
-        class="slot active"
-        id="slot2"
-        onclick="setSlot(2)">
-
-        <span class="key">2</span>
-
-        🔫
-
-        <div
-            class="wname"
-            id="wname">
-            Pistola
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- ======================================================
-     EMOTES
-====================================================== -->
-
-<div
-    id="emote-bar"
-    style="display:none">
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('dance')">
-        💃
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('wave')">
-        👋
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('cheer')">
-        🎉
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('laugh')">
-        😂
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('heart')">
-        ❤️
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('angry')">
-        😡
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('thumbs')">
-        👍
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('cool')">
-        😎
-    </button>
-
-    <button
-        class="emote-btn"
-        onclick="doEmote('sit')">
-        🪑
-    </button>
-
-</div>
-
-
-<!-- ======================================================
-     CONNECTION
-====================================================== -->
-
-<div
-    id="connection-status"
-    class="disconnected">
-
-    Desconectado
-
-</div>
-
-
-<div id="storm-warning">
-    ⚠️ ¡La tormenta se acerca!
-</div>
-
-
-<!-- ======================================================
-     MINIMAP
-====================================================== -->
-
-<canvas
-    id="minimap"
-    width="120"
-    height="120"
-    style="display:none">
-</canvas>
-
-
-<!-- ======================================================
-     MOBILE
-====================================================== -->
-
-<div id="mobile-controls">
-
-    <div
-        class="joystick"
-        id="move-stick">
-
-        <div
-            class="joy-knob"
-            id="move-knob">
-        </div>
-
-    </div>
-
-
-    <div
-        class="joystick"
-        id="aim-stick">
-
-        <div
-            class="joy-knob"
-            id="aim-knob">
-        </div>
-
-    </div>
-
-
-    <button
-        class="mobile-action"
-        id="mobile-fire">
-        🔥
-    </button>
-
-
-    <button
-        class="mobile-action"
-        id="mobile-pickup">
-        E
-    </button>
-
-
-    <button
-        class="mobile-action"
-        id="mobile-build">
-        🧱
-    </button>
-
-</div>
-
-</div>
-
-
-<!-- ======================================================
-     LOBBY
-====================================================== -->
-
-<div id="status">
-
-    <h2>PixelRoyale</h2>
-
-    <div class="sub">
-        Battle Royale · Construcción · Loot · Tormenta
-    </div>
-
-
-    <div
-        class="lobby-section"
-        id="connect-section">
-
-        <input
-            id="name-input"
-            maxlength="16"
-            placeholder="Tu nombre">
-
-        <br><br>
-
-        <button onclick="connect()">
-            Conectar
-        </button>
-
-        <p
-            style="
-                margin-top:14px;
-                color:#777;
-                font-size:11px;
-            ">
-
-            WASD mover · 1 Pico · 2 Arma<br>
-            Q construir · E recoger · Ratón disparar<br>
-            3-9 emotes · Enter chat
-
-        </p>
-
-    </div>
-
-
-    <div
-        class="lobby-section"
-        id="lobby-section"
-        style="display:none">
-
-        <p>
-            Tamaño de escuadrón
-        </p>
-
-
-        <div class="party-row">
-
-            <button
-                id="btn-solo"
-                onclick="setSquadSize(1)">
-                Solo
-            </button>
-
-            <button
-                class="secondary"
-                id="btn-duo"
-                onclick="setSquadSize(2)">
-                Dúo
-            </button>
-
-            <button
-                class="secondary"
-                id="btn-trio"
-                onclick="setSquadSize(3)">
-                Trío
-            </button>
-
-            <button
-                class="secondary"
-                id="btn-squad"
-                onclick="setSquadSize(4)">
-                Escuadrón
-            </button>
-
-        </div>
-
-
-        <div class="party-row">
-
-            <button
-                class="secondary"
-                onclick="createParty()">
-                Crear partido
-            </button>
-
-            <input
-                id="party-code"
-                maxlength="6"
-                placeholder="Código"
-                style="width:90px">
-
-            <button
-                class="secondary"
-                onclick="joinParty()">
-                Unirse
-            </button>
-
-        </div>
-
-
-        <p
-            id="party-info"
-            style="
-                color:#00c6ff;
-                font-size:12px;
-                min-height:16px;
-            ">
-        </p>
-
-
-        <div
-            id="lobby-players"
-            class="lobby-players">
-        </div>
-
-
-        <div class="party-row">
-
-            <button
-                id="ready-btn"
-                class="ready"
-                onclick="toggleReady()">
-                Listo
-            </button>
-
-            <button
-                class="secondary"
-                onclick="requestStart()">
-                Iniciar partida
-            </button>
-
-        </div>
-
-
-        <p
-            style="
-                color:#888;
-                font-size:11px;
-            ">
-
-            XP total:
-            <span id="total-xp">0</span>
-
-        </p>
-
-    </div>
-
-
-    <!-- ==================================================
-         END
-    ================================================== -->
-
-    <div
-        class="lobby-section"
-        id="end-section"
-        style="display:none">
-
-        <div
-            id="winner-text"
-            style="
-                font-size:21px;
-                margin-bottom:12px;
-            ">
-        </div>
-
-
-        <div
-            id="xp-result"
-            style="
-                color:#2ecc71;
-                margin-bottom:12px;
-            ">
-        </div>
-
-
-        <div
-            id="match-stats"
-            style="
-                text-align:left;
-                max-height:160px;
-                overflow:auto;
-                font-size:13px;
-            ">
-        </div>
-
-
-        <button
-            onclick="playAgain()"
-            style="margin-top:15px">
-
-            Jugar otra vez
-
-        </button>
-
-    </div>
-
-</div>
-
-
-<!-- ======================================================
-     COUNTDOWN
-====================================================== -->
-
-<div id="countdown-overlay">
-    5
-</div>
-
-</div>
-
-
-<script>
-
-/* =========================================================
-   CANVAS
-========================================================= */
-
-const canvas =
-    document.getElementById('game');
-
-const ctx =
-    canvas.getContext('2d');
-
-const mini =
-    document.getElementById('minimap');
-
-const mctx =
-    mini.getContext('2d');
-
-const W = canvas.width;
-const H = canvas.height;
-
-const WORLD = 2000;
-
-
-/* =========================================================
-   ESTADO
-========================================================= */
-
-let ws = null;
-
-let myId = null;
-
-let gameRunning = false;
-
-let gameState = 'lobby';
-
-let players = new Map();
-
-let walls = [];
-
-let trees = [];
-
-let loot = [];
-
-let bullets = [];
-
-let particles = [];
-
-let me = null;
-
-let myKills = 0;
-
-let totalXp = 0;
-
-let currentSlot = 2;
-
-let buildMode = false;
-
-let myReady = false;
-
-let mySquadSize = 1;
-
-let mySquadId = null;
-
-let myPartyCode = null;
-
-
-/* =========================================================
-   INPUT
-========================================================= */
-
-const keys = {};
-
-const mouse = {
-    x: W / 2,
-    y: H / 2,
-    down: false
-};
-
-let lastShot = 0;
-
-let lastSwing = 0;
-
-let lastPositionSend = 0;
-
-let lastFrameTime =
-    performance.now();
-
-
-/* =========================================================
-   MOVIMIENTO
-========================================================= */
-
-const PLAYER_SPEED = 225;
-
-let moveJoystick = {
-    x: 0,
-    y: 0
-};
-
-let aimJoystick = {
-    x: 0,
-    y: 0
-};
-
-
-/* =========================================================
-   TORMENTA
-========================================================= */
-
-let storm = {
-
-    cx: WORLD / 2,
-    cy: WORLD / 2,
-
-    radius: 1400,
-
-    targetRadius: 1400,
-
-    damage: 2,
-
-    phase: 0
-};
-
-
-/* =========================================================
-   UTILS
-========================================================= */
-
-function rand(a,b){
-
-    return Math.random() *
-        (b-a) + a;
-}
-
-function dist(a,b){
-
-    return Math.hypot(
-        a.x-b.x,
-        a.y-b.y
+  wall.x =
+    clamp(
+      wall.x,
+      0,
+      WORLD_SIZE - wall.width
     );
-}
 
-function clamp(v,min,max){
-
-    return Math.max(
-        min,
-        Math.min(max,v)
+  wall.y =
+    clamp(
+      wall.y,
+      0,
+      WORLD_SIZE - wall.height
     );
-}
 
-function send(data){
+  walls.push(
+    wall
+  );
 
-    if (
-        ws &&
-        ws.readyState ===
-        WebSocket.OPEN
-    ) {
+  /*
+   * Limitar la cantidad de construcciones
+   * por jugador.
+   */
 
-        ws.send(
-            JSON.stringify(data)
-        );
+  const mine =
+    walls.filter(
+      w =>
+        w.ownerId === player.id
+    );
+
+  if(mine.length > 20){
+
+    const first =
+      mine[0];
+
+    const index =
+      walls.indexOf(first);
+
+    if(index !== -1){
+      walls.splice(index,1);
     }
+  }
 }
 
-
 /* =========================================================
-   CONEXIÓN
+   PICKAXE
 ========================================================= */
 
-function connect(){
+function pickaxe(player){
 
-    const name =
-        document
-            .getElementById(
-                'name-input'
-            )
-            .value
-            .trim()
-            ||
-            'Jugador';
+  if(!player) return;
 
+  const range = 75;
 
-    const protocol =
-        location.protocol ===
-        'https:'
-            ? 'wss:'
-            : 'ws:';
+  for(
+    let i = walls.length - 1;
+    i >= 0;
+    i--
+  ){
 
+    const wall =
+      walls[i];
 
-    const host =
-        location.host ||
-        'localhost:3000';
+    const centerX =
+      wall.x +
+      wall.width / 2;
 
-
-    ws =
-        new WebSocket(
-            protocol +
-            '//' +
-            host
-        );
-
-
-    ws.onopen = () => {
-
-        const status =
-            document.getElementById(
-                'connection-status'
-            );
-
-        status.textContent =
-            'Conectado';
-
-        status.className =
-            'connected';
-
-
-        document
-            .getElementById(
-                'connect-section'
-            )
-            .style.display =
-            'none';
-
-
-        document
-            .getElementById(
-                'lobby-section'
-            )
-            .style.display =
-            'block';
-
-
-        send({
-            type:'setName',
-            name
-        });
-    };
-
-
-    ws.onclose = () => {
-
-        gameRunning = false;
-
-        const status =
-            document.getElementById(
-                'connection-status'
-            );
-
-        status.textContent =
-            'Desconectado';
-
-        status.className =
-            'disconnected';
-
-
-        document
-            .getElementById(
-                'status'
-            )
-            .style.display =
-            'flex';
-
-
-        document
-            .getElementById(
-                'connect-section'
-            )
-            .style.display =
-            'block';
-
-
-        document
-            .getElementById(
-                'lobby-section'
-            )
-            .style.display =
-            'none';
-
-
-        document
-            .getElementById(
-                'end-section'
-            )
-            .style.display =
-            'none';
-    };
-
-
-    ws.onerror = () => {
-
-        console.error(
-            'WebSocket error'
-        );
-    };
-
-
-    ws.onmessage = event => {
-
-        try {
-
-            handleMessage(
-                JSON.parse(
-                    event.data
-                )
-            );
-
-        } catch(error) {
-
-            console.error(
-                error
-            );
-        }
-    };
-}
-
-
-/* =========================================================
-   MENSAJES
-========================================================= */
-
-function handleMessage(data){
-
-    switch(data.type){
-
-        case 'welcome': {
-
-            myId =
-                data.id;
-
-            gameState =
-                data.gameState ||
-                'lobby';
-
-            players.clear();
-
-
-            for(
-                const p of
-                data.players || []
-            ){
-
-                if(
-                    p.id ===
-                    myId
-                ){
-
-                    me = {
-
-                        id: myId,
-
-                        x: 0,
-                        y: 0,
-
-                        angle: 0,
-
-                        health: 100,
-
-                        shield: 0,
-
-                        materials: 50,
-
-                        color:
-                            p.color ||
-                            '#00c6ff',
-
-                        name:
-                            p.name ||
-                            'Yo',
-
-                        alive: true,
-
-                        emote: null,
-
-                        slot: 2,
-
-                        weapon: {
-                            id:'pistol',
-                            name:'Pistola',
-                            damage:20,
-                            rate:300,
-                            speed:15,
-                            radius:4,
-                            pellets:1,
-                            emoji:'🔫'
-                        },
-
-                        squadId:
-                            p.squadId,
-
-                        squadSize:
-                            p.squadSize ||
-                            1
-                    };
-
-
-                    totalXp =
-                        p.totalXp ||
-                        0;
-
-                    document
-                        .getElementById(
-                            'total-xp'
-                        )
-                        .textContent =
-                        totalXp;
-
-                } else {
-
-                    players.set(
-                        p.id,
-                        {
-                            ...p,
-                            alive:true,
-                            walkCycle:0
-                        }
-                    );
-                }
-            }
-
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'playerJoinedLobby': {
-
-            if(
-                data.player.id !==
-                myId
-            ){
-
-                players.set(
-                    data.player.id,
-                    {
-                        ...data.player,
-                        alive:true,
-                        walkCycle:0
-                    }
-                );
-
-                addChat(
-                    'Sistema',
-                    data.player.name +
-                    ' entró al lobby'
-                );
-            }
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'lobbyUpdate': {
-
-            if(
-                data.id ===
-                myId
-            ){
-
-                if(
-                    data.squadId !==
-                    undefined
-                ){
-                    mySquadId =
-                        data.squadId;
-                }
-
-                if(
-                    data.squadSize !==
-                    undefined
-                ){
-                    mySquadSize =
-                        data.squadSize;
-                }
-
-                if(
-                    data.ready !==
-                    undefined
-                ){
-                    myReady =
-                        data.ready;
-                }
-            }
-
-
-            if(
-                players.has(
-                    data.id
-                )
-            ){
-
-                const p =
-                    players.get(
-                        data.id
-                    );
-
-                if(
-                    data.ready !==
-                    undefined
-                ){
-                    p.ready =
-                        data.ready;
-                }
-
-                if(
-                    data.squadId !==
-                    undefined
-                ){
-                    p.squadId =
-                        data.squadId;
-                }
-
-                if(
-                    data.squadSize !==
-                    undefined
-                ){
-                    p.squadSize =
-                        data.squadSize;
-                }
-            }
-
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'partyCreated': {
-
-            myPartyCode =
-                data.code;
-
-            mySquadId =
-                data.squadId;
-
-
-            document
-                .getElementById(
-                    'party-info'
-                )
-                .textContent =
-                'Código: ' +
-                data.code;
-
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'partyJoined': {
-
-            myPartyCode =
-                data.code;
-
-            mySquadId =
-                data.squadId;
-
-
-            document
-                .getElementById(
-                    'party-info'
-                )
-                .textContent =
-                'Unido al partido: ' +
-                data.code;
-
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'partyFull':
-
-            addChat(
-                'Sistema',
-                'El partido está lleno'
-            );
-
-            break;
-
-
-        case 'partyNotFound':
-
-            addChat(
-                'Sistema',
-                'Código no encontrado'
-            );
-
-            break;
-
-
-        case 'countdown': {
-
-            const overlay =
-                document
-                    .getElementById(
-                        'countdown-overlay'
-                    );
-
-            overlay.style.display =
-                'flex';
-
-            overlay.textContent =
-                data.seconds;
-
-
-            if(
-                data.seconds <= 0
-            ){
-                overlay.style.display =
-                    'none';
-            }
-
-            break;
-        }
-
-
-        case 'matchStart': {
-
-            startLocalMatch(
-                data
-            );
-
-            break;
-        }
-
-
-        case 'state': {
-
-            syncState(
-                data
-            );
-
-            break;
-        }
-
-
-        case 'playerUpdate': {
-
-            if(
-                data.id !==
-                myId &&
-                players.has(
-                    data.id
-                )
-            ){
-
-                const p =
-                    players.get(
-                        data.id
-                    );
-
-                p.x =
-                    data.x;
-
-                p.y =
-                    data.y;
-
-                p.angle =
-                    data.angle;
-
-                p.health =
-                    data.health;
-
-                p.shield =
-                    data.shield;
-
-                p.materials =
-                    data.materials;
-
-                p.slot =
-                    data.slot;
-
-                if(
-                    data.weapon
-                ){
-                    p.weapon =
-                        data.weapon;
-                }
-
-                if(
-                    data.emote !==
-                    undefined
-                ){
-                    p.emote =
-                        data.emote;
-                }
-
-                p.walkCycle =
-                    (p.walkCycle || 0) +
-                    .15;
-            }
-
-            break;
-        }
-
-
-        case 'bulletSpawn': {
-
-            if(
-                !bullets.some(
-                    b =>
-                        b.id ===
-                        data.bullet.id
-                )
-            ){
-
-                bullets.push({
-                    ...data.bullet
-                });
-            }
-
-            break;
-        }
-
-
-        case 'bulletRemove': {
-
-            bullets =
-                bullets.filter(
-                    b =>
-                        b.id !==
-                        data.id
-                );
-
-            break;
-        }
-
-
-        case 'bulletHitWall': {
-
-            createParticles(
-                data.x,
-                data.y,
-                '#dddddd',
-                5
-            );
-
-            break;
-        }
-
-
-        case 'playerDamaged': {
-
-            if(
-                data.id ===
-                myId
-            ){
-
-                if(me){
-
-                    me.health =
-                        data.health;
-
-                    me.shield =
-                        data.shield;
-
-                    updateHUD();
-
-                    createParticles(
-                        me.x,
-                        me.y,
-                        '#e74c3c',
-                        6
-                    );
-                }
-
-            } else if(
-                players.has(
-                    data.id
-                )
-            ){
-
-                const p =
-                    players.get(
-                        data.id
-                    );
-
-                p.health =
-                    data.health;
-
-                p.shield =
-                    data.shield;
-            }
-
-            break;
-        }
-
-
-        case 'playerDied': {
-
-            if(
-                data.id ===
-                myId
-            ){
-
-                me.alive =
-                    false;
-
-                me.health =
-                    0;
-
-                updateHUD();
-
-                addChat(
-                    'Sistema',
-                    data.reason ===
-                    'storm'
-                        ? '¡La tormenta te eliminó!'
-                        : '¡Has sido eliminado!'
-                );
-
-            } else if(
-                players.has(
-                    data.id
-                )
-            ){
-
-                const p =
-                    players.get(
-                        data.id
-                    );
-
-                p.alive =
-                    false;
-
-                p.health =
-                    0;
-
-                createParticles(
-                    p.x,
-                    p.y,
-                    p.color ||
-                    '#e74c3c',
-                    15
-                );
-            }
-
-            updatePlayerList();
-
-            break;
-        }
-
-
-        case 'wallBuilt': {
-
-            if(
-                !walls.some(
-                    w =>
-                        w.id ===
-                        data.wall.id
-                )
-            ){
-
-                walls.push(
-                    data.wall
-                );
-            }
-
-
-            if(
-                data.playerId ===
-                myId &&
-                me
-            ){
-
-                me.materials =
-                    data.materials;
-
-                updateHUD();
-            }
-
-
-            createParticles(
-                data.wall.x +
-                data.wall.w / 2,
-
-                data.wall.y +
-                data.wall.h / 2,
-
-                '#00c6ff',
-
-                8
-            );
-
-            break;
-        }
-
-
-        case 'wallDamaged': {
-
-            const wall =
-                walls.find(
-                    w =>
-                        w.id ===
-                        data.wallId
-                );
-
-            if(wall){
-
-                wall.health =
-                    data.health;
-            }
-
-            break;
-        }
-
-
-        case 'wallDestroyed': {
-
-            const wall =
-                walls.find(
-                    w =>
-                        w.id ===
-                        data.wallId
-                );
-
-            if(wall){
-
-                createParticles(
-                    wall.x +
-                    wall.w / 2,
-
-                    wall.y +
-                    wall.h / 2,
-
-                    '#aaa',
-
-                    14
-                );
-            }
-
-
-            walls =
-                walls.filter(
-                    w =>
-                        w.id !==
-                        data.wallId
-                );
-
-            break;
-        }
-
-
-        case 'treeDamaged': {
-
-            const tree =
-                trees.find(
-                    t =>
-                        t.id ===
-                        data.treeId
-                );
-
-            if(tree){
-
-                tree.health =
-                    data.health;
-            }
-
-            break;
-        }
-
-
-        case 'treeDestroyed': {
-
-            trees =
-                trees.filter(
-                    t =>
-                        t.id !==
-                        data.treeId
-                );
-
-
-            if(
-                data.playerId ===
-                myId &&
-                me
-            ){
-
-                me.materials =
-                    data.materials;
-
-                updateHUD();
-            }
-
-            break;
-        }
-
-
-        case 'lootSpawn': {
-
-            loot.push(
-                data.loot
-            );
-
-            break;
-        }
-
-
-        case 'lootRemoved': {
-
-            loot =
-                loot.filter(
-                    l =>
-                        l.id !==
-                        data.lootId
-                );
-
-
-            if(
-                data.playerId ===
-                myId &&
-                me
-            ){
-
-                me.materials =
-                    data.materials;
-
-                updateHUD();
-            }
-
-            break;
-        }
-
-
-        case 'weaponPickup': {
-
-            if(
-                data.id ===
-                myId
-            ){
-
-                me.weapon =
-                    data.weapon;
-
-                updateHUD();
-
-            } else if(
-                players.has(
-                    data.id
-                )
-            ){
-
-                players.get(
-                    data.id
-                ).weapon =
-                    data.weapon;
-            }
-
-            break;
-        }
-
-
-        case 'stormUpdate': {
-
-            if(
-                data.storm
-            ){
-
-                Object.assign(
-                    storm,
-                    data.storm
-                );
-
-
-                if(
-                    storm.phase > 0 &&
-                    storm.targetRadius <
-                    storm.radius - 50
-                ){
-
-                    const warning =
-                        document
-                            .getElementById(
-                                'storm-warning'
-                            );
-
-                    warning.classList.add(
-                        'show'
-                    );
-
-                    setTimeout(
-                        () =>
-                            warning.classList.remove(
-                                'show'
-                            ),
-                        3000
-                    );
-                }
-            }
-
-            break;
-        }
-
-
-        case 'emote': {
-
-            const target =
-                data.id === myId
-                    ? me
-                    : players.get(
-                        data.id
-                    );
-
-            if(target){
-
-                target.emote =
-                    data.emote;
-            }
-
-            break;
-        }
-
-
-        case 'chat': {
-
-            addChat(
-                data.name,
-                data.message
-            );
-
-            break;
-        }
-
-
-        case 'matchEnd': {
-
-            showMatchEnd(
-                data
-            );
-
-            break;
-        }
-
-
-        case 'backToLobby': {
-
-            gameState =
-                'lobby';
-
-            gameRunning =
-                false;
-
-            document
-                .getElementById(
-                    'status'
-                )
-                .style.display =
-                'flex';
-
-            document
-                .getElementById(
-                    'lobby-section'
-                )
-                .style.display =
-                'block';
-
-            document
-                .getElementById(
-                    'end-section'
-                )
-                .style.display =
-                'none';
-
-            myReady =
-                false;
-
-            players.clear();
-
-
-            for(
-                const p of
-                data.players || []
-            ){
-
-                if(
-                    p.id ===
-                    myId
-                ){
-
-                    if(me){
-
-                        me.name =
-                            p.name;
-
-                        me.color =
-                            p.color;
-                    }
-
-                    totalXp =
-                        p.totalXp ||
-                        totalXp;
-
-                } else {
-
-                    players.set(
-                        p.id,
-                        {
-                            ...p,
-                            alive:true,
-                            walkCycle:0
-                        }
-                    );
-                }
-            }
-
-
-            document
-                .getElementById(
-                    'total-xp'
-                )
-                .textContent =
-                totalXp;
-
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'nameChange': {
-
-            if(
-                data.id ===
-                myId
-            ){
-
-                if(me){
-
-                    me.name =
-                        data.name;
-                }
-
-            } else if(
-                players.has(
-                    data.id
-                )
-            ){
-
-                players.get(
-                    data.id
-                ).name =
-                    data.name;
-            }
-
-
-            updateLobbyUI();
-
-            break;
-        }
-
-
-        case 'playerLeft': {
-
-            players.delete(
-                data.id
-            );
-
-            updateLobbyUI();
-
-            break;
-        }
-    }
-}
-
-
-/* =========================================================
-   START LOCAL MATCH
-========================================================= */
-
-function startLocalMatch(data){
-
-    document
-        .getElementById(
-            'status'
-        )
-        .style.display =
-        'none';
-
-    document
-        .getElementById(
-            'hud'
-        )
-        .style.display =
-        'flex';
-
-    document
-        .getElementById(
-            'player-list'
-        )
-        .style.display =
-        'block';
-
-    document
-        .getElementById(
-            'hotbar'
-        )
-        .style.display =
-        'flex';
-
-    document
-        .getElementById(
-            'emote-bar'
-        )
-        .style.display =
-        'flex';
-
-    document
-        .getElementById(
-            'minimap'
-        )
-        .style.display =
-        'block';
-
-
-    document
-        .getElementById(
-            'countdown-overlay'
-        )
-        .style.display =
-        'none';
-
-
-    gameState =
-        'playing';
-
-    gameRunning =
-        true;
-
-
-    walls =
-        data.walls || [];
-
-    trees =
-        data.trees || [];
-
-    loot =
-        data.loot || [];
-
-    bullets = [];
-
+    const centerY =
+      wall.y +
+      wall.height / 2;
 
     if(
-        data.storm
+      distance(
+        player.x,
+        player.y,
+        centerX,
+        centerY
+      ) <= range
     ){
 
-        Object.assign(
-            storm,
-            data.storm
-        );
+      walls.splice(i,1);
+      return;
     }
-
-
-    players.clear();
-
-    myKills = 0;
-
-
-    for(
-        const p of
-        data.players || []
-    ){
-
-        if(
-            p.id ===
-            myId
-        ){
-
-            if(!me){
-
-                me = {
-                    id:myId,
-                    x:p.x,
-                    y:p.y,
-                    angle:p.angle,
-                    health:p.health,
-                    shield:p.shield,
-                    materials:p.materials,
-                    color:p.color,
-                    name:p.name,
-                    alive:true,
-                    emote:null,
-                    slot:2,
-                    weapon:p.weapon
-                };
-
-            } else {
-
-                me.x =
-                    p.x;
-
-                me.y =
-                    p.y;
-
-                me.angle =
-                    p.angle;
-
-                me.health =
-                    p.health;
-
-                me.shield =
-                    p.shield;
-
-                me.materials =
-                    p.materials;
-
-                me.color =
-                    p.color;
-
-                me.weapon =
-                    p.weapon;
-            }
-
-
-            currentSlot =
-                2;
-
-        } else {
-
-            players.set(
-                p.id,
-                {
-                    ...p,
-                    walkCycle:0
-                }
-            );
-        }
-    }
-
-
-    lastFrameTime =
-        performance.now();
-
-    lastPositionSend =
-        0;
-
-
-    updateHUD();
-
-    updatePlayerList();
+  }
 }
-
-
-/* =========================================================
-   SYNC STATE
-========================================================= */
-
-function syncState(data){
-
-    if(
-        !gameRunning
-    ){
-        return;
-    }
-
-
-    if(
-        data.walls
-    ){
-        walls =
-            data.walls;
-    }
-
-    if(
-        data.trees
-    ){
-        trees =
-            data.trees;
-    }
-
-    if(
-        data.loot
-    ){
-        loot =
-            data.loot;
-    }
-
-
-    if(
-        data.storm
-    ){
-
-        Object.assign(
-            storm,
-            data.storm
-        );
-    }
-
-
-    for(
-        const p of
-        data.players || []
-    ){
-
-        if(
-            p.id ===
-            myId
-        ){
-
-            if(me){
-
-                me.health =
-                    p.health;
-
-                me.shield =
-                    p.shield;
-
-                me.materials =
-                    p.materials;
-
-                me.weapon =
-                    p.weapon ||
-                    me.weapon;
-
-                me.alive =
-                    p.alive;
-            }
-
-        } else {
-
-            if(
-                players.has(
-                    p.id
-                )
-            ){
-
-                const local =
-                    players.get(
-                        p.id
-                    );
-
-                Object.assign(
-                    local,
-                    p
-                );
-
-            } else {
-
-                players.set(
-                    p.id,
-                    {
-                        ...p,
-                        walkCycle:0
-                    }
-                );
-            }
-        }
-    }
-
-
-    updateHUD();
-
-    updatePlayerList();
-}
-
-
-/* =========================================================
-   LOBBY
-========================================================= */
-
-function setSquadSize(n){
-
-    mySquadSize =
-        n;
-
-    send({
-        type:
-            'setSquadSize',
-
-        size:n
-    });
-
-
-    const ids =
-        [
-            'solo',
-            'duo',
-            'trio',
-            'squad'
-        ];
-
-
-    ids.forEach(
-        (id,index) => {
-
-            const button =
-                document
-                    .getElementById(
-                        'btn-' + id
-                    );
-
-            if(!button){
-                return;
-            }
-
-            button.className =
-                index + 1 === n
-                    ? ''
-                    : 'secondary';
-        }
-    );
-
-
-    if(
-        n === 1
-    ){
-
-        send({
-            type:
-                'leaveParty'
-        });
-
-        mySquadId =
-            null;
-
-        myPartyCode =
-            null;
-
-        document
-            .getElementById(
-                'party-info'
-            )
-            .textContent =
-            '';
-    }
-}
-
-
-function createParty(){
-
-    send({
-        type:
-            'createParty'
-    });
-}
-
-
-function joinParty(){
-
-    const code =
-        document
-            .getElementById(
-                'party-code'
-            )
-            .value
-            .trim();
-
-    if(code){
-
-        send({
-            type:
-                'joinParty',
-
-            code
-        });
-    }
-}
-
-
-function toggleReady(){
-
-    myReady =
-        !myReady;
-
-    send({
-        type:
-            'setReady',
-
-        ready:
-            myReady
-    });
-
-
-    const button =
-        document
-            .getElementById(
-                'ready-btn'
-            );
-
-    button.textContent =
-        myReady
-            ? 'Cancelar listo'
-            : 'Listo';
-
-    button.className =
-        myReady
-            ? 'danger'
-            : 'ready';
-}
-
-
-function requestStart(){
-
-    send({
-        type:
-            'requestStart'
-    });
-}
-
-
-function playAgain(){
-
-    send({
-        type:
-            'playAgain'
-    });
-}
-
-
-function updateLobbyUI(){
-
-    const el =
-        document
-            .getElementById(
-                'lobby-players'
-            );
-
-    if(!el){
-        return;
-    }
-
-
-    let html = '';
-
-
-    html +=
-        `<div style="color:#2ecc71">
-            ● ${me ? me.name : 'Yo'}
-            (tú)
-            ${myReady ? '✅' : ''}
-            ${mySquadId ? '· Escuadrón' : '· Solo'}
-        </div>`;
-
-
-    for(
-        const p of
-        players.values()
-    ){
-
-        const same =
-            mySquadId &&
-            p.squadId ===
-            mySquadId;
-
-
-        html +=
-            `<div class="${same ? 'squad' : ''}">
-                ● ${escapeHtml(p.name)}
-                ${p.ready ? '✅' : ''}
-                ${p.squadId ? '· Escuadrón' : ''}
-            </div>`;
-    }
-
-
-    el.innerHTML =
-        html;
-}
-
-
-/* =========================================================
-   SLOT
-========================================================= */
-
-function setSlot(n){
-
-    currentSlot =
-        n;
-
-    if(me){
-
-        me.slot =
-            n;
-    }
-
-
-    document
-        .getElementById(
-            'slot1'
-        )
-        .classList.toggle(
-            'active',
-            n === 1
-        );
-
-
-    document
-        .getElementById(
-            'slot2'
-        )
-        .classList.toggle(
-            'active',
-            n === 2
-        );
-
-
-    buildMode =
-        false;
-
-    updateHUD();
-}
-
-
-/* =========================================================
-   HUD
-========================================================= */
-
-function updateHUD(){
-
-    if(!me){
-        return;
-    }
-
-
-    document
-        .getElementById(
-            'health-bar'
-        )
-        .style.width =
-        clamp(
-            me.health,
-            0,
-            100
-        ) + '%';
-
-
-    document
-        .getElementById(
-            'shield-bar'
-        )
-        .style.width =
-        clamp(
-            me.shield,
-            0,
-            100
-        ) + '%';
-
-
-    document
-        .getElementById(
-            'materials'
-        )
-        .textContent =
-        '🪵 Materiales: ' +
-        Math.floor(
-            me.materials
-        ) +
-        ' / 200';
-
-
-    document
-        .getElementById(
-            'kills'
-        )
-        .textContent =
-        '💀 Eliminaciones: ' +
-        myKills;
-
-
-    document
-        .getElementById(
-            'build-indicator'
-        )
-        .classList.toggle(
-            'active',
-            buildMode
-        );
-
-
-    if(
-        me.weapon
-    ){
-
-        document
-            .getElementById(
-                'wname'
-            )
-            .textContent =
-            me.weapon.name ||
-            'Arma';
-
-
-        document
-            .getElementById(
-                'weapon-info'
-            )
-            .textContent =
-            (
-                me.weapon.emoji ||
-                '🔫'
-            ) +
-            ' ' +
-            (
-                me.weapon.name ||
-                'Arma'
-            );
-    }
-}
-
-
-/* =========================================================
-   PLAYER LIST
-========================================================= */
-
-function updatePlayerList(){
-
-    const el =
-        document
-            .getElementById(
-                'plist-content'
-            );
-
-    if(!el){
-        return;
-    }
-
-
-    let html =
-        `<div class="plist-item me">
-            ${escapeHtml(me ? me.name : 'Yo')}
-            ${me && !me.alive ? ' 💀' : ''}
-        </div>`;
-
-
-    for(
-        const p of
-        players.values()
-    ){
-
-        const same =
-            mySquadId &&
-            p.squadId ===
-            mySquadId;
-
-
-        html +=
-            `<div class="plist-item
-                ${p.alive ? '' : 'dead'}
-                ${same ? 'squad' : ''}">
-                ${escapeHtml(p.name)}
-            </div>`;
-    }
-
-
-    el.innerHTML =
-        html;
-}
-
-
-/* =========================================================
-   CHAT
-========================================================= */
-
-function addChat(name,message){
-
-    const box =
-        document
-            .getElementById(
-                'chat-box'
-            );
-
-
-    const div =
-        document.createElement(
-            'div'
-        );
-
-    div.className =
-        'chat-msg';
-
-
-    div.innerHTML =
-        `<b style="color:#00c6ff">
-            ${escapeHtml(name)}:
-        </b>
-        ${escapeHtml(message)}`;
-
-
-    box.appendChild(
-        div
-    );
-
-
-    box.scrollTop =
-        box.scrollHeight;
-
-
-    while(
-        box.children.length >
-        8
-    ){
-
-        box.removeChild(
-            box.firstChild
-        );
-    }
-}
-
-
-/* =========================================================
-   EMOTES
-========================================================= */
-
-function doEmote(type){
-
-    if(
-        !me ||
-        !me.alive ||
-        !gameRunning
-    ){
-        return;
-    }
-
-
-    send({
-        type:
-            'emote',
-
-        emote:
-            type
-    });
-}
-
-
-/* =========================================================
-   CONSTRUIR
-========================================================= */
-
-function buildWall(){
-
-    if(
-        !me ||
-        !me.alive ||
-        me.materials <
-        10
-    ){
-        return;
-    }
-
-
-    const bx =
-        me.x +
-        Math.cos(me.angle) *
-        55 -
-        20;
-
-    const by =
-        me.y +
-        Math.sin(me.angle) *
-        55 -
-        20;
-
-
-    send({
-
-        type:
-            'build',
-
-        x: bx,
-
-        y: by
-    });
-}
-
-
-/* =========================================================
-   PICO
-========================================================= */
-
-function swingPickaxe(){
-
-    if(
-        !me ||
-        !me.alive ||
-        currentSlot !== 1
-    ){
-        return;
-    }
-
-
-    const now =
-        Date.now();
-
-
-    if(
-        now -
-        lastSwing <
-        350
-    ){
-        return;
-    }
-
-
-    lastSwing =
-        now;
-
-
-    let closest =
-        null;
-
-    let closestD =
-        65;
-
-
-    for(
-        const tree of
-        trees
-    ){
-
-        const d =
-            distanceBetween(
-                me.x,
-                me.y,
-                tree.x,
-                tree.y
-            );
-
-
-        if(
-            d <
-            closestD
-        ){
-
-            closestD =
-                d;
-
-            closest =
-                tree;
-        }
-    }
-
-
-    if(closest){
-
-        send({
-
-            type:
-                'treeHit',
-
-            treeId:
-                closest.id
-        });
-    }
-
-
-    let wallTarget =
-        null;
-
-    let wallDistance =
-        65;
-
-
-    for(
-        const wall of
-        walls
-    ){
-
-        const d =
-            distanceBetween(
-                me.x,
-                me.y,
-                wall.x +
-                wall.w / 2,
-                wall.y +
-                wall.h / 2
-            );
-
-
-        if(
-            d <
-            wallDistance
-        ){
-
-            wallDistance =
-                d;
-
-            wallTarget =
-                wall;
-        }
-    }
-
-
-    if(wallTarget){
-
-        send({
-
-            type:
-                'wallHit',
-
-            wallId:
-                wallTarget.id
-        });
-    }
-}
-
-
-/* =========================================================
-   PICKUP
-========================================================= */
-
-function tryPickup(){
-
-    if(
-        !me ||
-        !me.alive
-    ){
-        return;
-    }
-
-
-    let closest =
-        null;
-
-    let closestD =
-        55;
-
-
-    for(
-        const item of
-        loot
-    ){
-
-        const d =
-            distanceBetween(
-                me.x,
-                me.y,
-                item.x,
-                item.y
-            );
-
-
-        if(
-            d <
-            closestD
-        ){
-
-            closestD =
-                d;
-
-            closest =
-                item;
-        }
-    }
-
-
-    if(closest){
-
-        send({
-
-            type:
-                'pickup',
-
-            lootId:
-                closest.id
-        });
-    }
-}
-
-
-/* =========================================================
-   DISPARO LOCAL
-========================================================= */
-
-function shoot(){
-
-    if(
-        !me ||
-        !me.alive ||
-        currentSlot !== 2 ||
-        buildMode
-    ){
-        return;
-    }
-
-
-    const now =
-        Date.now();
-
-
-    const rate =
-        me.weapon &&
-        me.weapon.rate
-            ? me.weapon.rate
-            : 300;
-
-
-    if(
-        now -
-        lastShot <
-        rate
-    ){
-        return;
-    }
-
-
-    lastShot =
-        now;
-
-
-    send({
-
-        type:
-            'shoot',
-
-        angle:
-            me.angle
-    });
-}
-
-
-/* =========================================================
-   PERSONAJE
-========================================================= */
-
-function drawPerson(
-    x,
-    y,
-    angle,
-    color,
-    walkCycle,
-    emote,
-    name,
-    isMe,
-    slot,
-    weapon
-){
-
-    ctx.save();
-
-    ctx.translate(
-        x,
-        y
-    );
-
-
-    let armL =
-        -0.4;
-
-    let armR =
-        0.4;
-
-    let legL =
-        0;
-
-    let legR =
-        0;
-
-    let bob =
-        0;
-
-
-    if(
-        emote ===
-        'dance'
-    ){
-
-        const t =
-            Date.now() /
-            120;
-
-        armL =
-            Math.sin(t) *
-            1.1;
-
-        armR =
-            -Math.sin(t) *
-            1.1;
-
-        legL =
-            Math.sin(t) *
-            .5;
-
-        legR =
-            -legL;
-
-        bob =
-            Math.sin(t * 2) *
-            2.5;
-
-    } else if(
-        emote ===
-        'wave'
-    ){
-
-        armR =
-            -1.7 +
-            Math.sin(
-                Date.now()/100
-            )*.4;
-
-    } else if(
-        emote ===
-        'cheer'
-    ){
-
-        armL =
-            -2.1;
-
-        armR =
-            -2.1;
-
-        bob =
-            Math.abs(
-                Math.sin(
-                    Date.now()/140
-                )
-            ) * 3;
-
-    } else if(
-        emote ===
-        'laugh'
-    ){
-
-        bob =
-            Math.sin(
-                Date.now()/90
-            ) * 2;
-
-        armL =
-            -.9;
-
-        armR =
-            .9;
-
-    } else if(
-        emote ===
-        'heart'
-    ){
-
-        armL =
-            -1.1;
-
-        armR =
-            1.1;
-
-    } else if(
-        emote ===
-        'angry'
-    ){
-
-        armL =
-            -1.3;
-
-        armR =
-            1.3;
-
-        bob =
-            Math.sin(
-                Date.now()/80
-            );
-
-    } else if(
-        emote ===
-        'thumbs'
-    ){
-
-        armR =
-            -1.7;
-
-    } else if(
-        emote ===
-        'cool'
-    ){
-
-        armR =
-            -.9;
-
-    } else if(
-        emote ===
-        'sit'
-    ){
-
-        bob =
-            5;
-
-        legL =
-            1.2;
-
-        legR =
-            -1.2;
-
-    } else {
-
-        const w =
-            Math.sin(
-                walkCycle || 0
-            ) * .55;
-
-        legL =
-            w;
-
-        legR =
-            -w;
-
-        armL =
-            -w*.6;
-
-        armR =
-            w*.6;
-    }
-
-
-    ctx.translate(
-        0,
-        bob
-    );
-
-
-    // sombra
-    ctx.beginPath();
-
-    ctx.ellipse(
-        0,
-        14,
-        10,
-        3.5,
-        0,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fillStyle =
-        'rgba(0,0,0,.3)';
-
-    ctx.fill();
-
-
-    // piernas
-    ctx.strokeStyle =
-        '#2c3e50';
-
-    ctx.lineWidth =
-        3.5;
-
-    ctx.lineCap =
-        'round';
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        -3.5,
-        2
-    );
-
-    ctx.lineTo(
-        -3.5 +
-        Math.sin(legL)*9,
-
-        2 +
-        Math.cos(legL)*9
-    );
-
-    ctx.stroke();
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        3.5,
-        2
-    );
-
-    ctx.lineTo(
-        3.5 +
-        Math.sin(legR)*9,
-
-        2 +
-        Math.cos(legR)*9
-    );
-
-    ctx.stroke();
-
-
-    // cuerpo
-    ctx.fillStyle =
-        color ||
-        '#00c6ff';
-
-    ctx.beginPath();
-
-    ctx.roundRect(
-        -7,
-        -14,
-        14,
-        16,
-        3
-    );
-
-    ctx.fill();
-
-
-    // brazos
-    ctx.strokeStyle =
-        color ||
-        '#00c6ff';
-
-    ctx.lineWidth =
-        3;
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        -6,
-        -8
-    );
-
-    ctx.lineTo(
-        -6 +
-        Math.sin(armL)*9,
-
-        -8 +
-        Math.cos(armL)*9
-    );
-
-    ctx.stroke();
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        6,
-        -8
-    );
-
-    ctx.lineTo(
-        6 +
-        Math.sin(armR)*9,
-
-        -8 +
-        Math.cos(armR)*9
-    );
-
-    ctx.stroke();
-
-
-    // cabeza
-    ctx.beginPath();
-
-    ctx.arc(
-        0,
-        -19,
-        6.5,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fillStyle =
-        '#f2c6a0';
-
-    ctx.fill();
-
-
-    // arma
-    if(
-        slot === 2 &&
-        weapon
-    ){
-
-        ctx.save();
-
-        ctx.rotate(
-            angle
-        );
-
-        ctx.fillStyle =
-            weapon.id === 'shotgun'
-                ? '#d35400'
-                : weapon.id === 'sniper'
-                    ? '#e74c3c'
-                    : weapon.id === 'rifle'
-                        ? '#2ecc71'
-                        : weapon.id === 'smg'
-                            ? '#9b59b6'
-                            : '#aaa';
-
-
-        ctx.fillRect(
-            5,
-            -2,
-            weapon.id === 'sniper'
-                ? 22
-                : 16,
-            4
-        );
-
-        ctx.restore();
-    }
-
-
-    // emote sobre cabeza
-    if(
-        emote
-    ){
-
-        const emoji =
-            {
-                dance:'💃',
-                wave:'👋',
-                cheer:'🎉',
-                laugh:'😂',
-                heart:'❤️',
-                angry:'😡',
-                thumbs:'👍',
-                cool:'😎',
-                sit:'🪑'
-            }[emote];
-
-
-        if(emoji){
-
-            ctx.font =
-                '18px sans-serif';
-
-            ctx.textAlign =
-                'center';
-
-            ctx.fillText(
-                emoji,
-                0,
-                -35
-            );
-        }
-    }
-
-
-    // nombre
-    ctx.font =
-        '10px Arial';
-
-    ctx.textAlign =
-        'center';
-
-    ctx.fillStyle =
-        '#fff';
-
-    ctx.fillText(
-        name || '',
-        0,
-        29
-    );
-
-
-    ctx.restore();
-}
-
-
-/* =========================================================
-   ÁRBOL
-========================================================= */
-
-function drawTree(tree){
-
-    ctx.save();
-
-    ctx.translate(
-        tree.x,
-        tree.y
-    );
-
-
-    ctx.fillStyle =
-        '#5D4037';
-
-    ctx.fillRect(
-        -6,
-        -5,
-        12,
-        22
-    );
-
-
-    const hp =
-        tree.health /
-        tree.maxHealth;
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        0,
-        -18,
-        16*hp+4,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fillStyle =
-        `rgba(
-            34,
-            ${Math.floor(100+hp*50)},
-            34,
-            .9
-        )`;
-
-    ctx.fill();
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        -8,
-        -12,
-        10*hp+2,
-        0,
-        Math.PI*2
-    );
-
-    ctx.arc(
-        8,
-        -12,
-        10*hp+2,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    if(
-        tree.health <
-        tree.maxHealth
-    ){
-
-        ctx.fillStyle =
-            '#222';
-
-        ctx.fillRect(
-            -14,
-            -40,
-            28,
-            4
-        );
-
-
-        ctx.fillStyle =
-            '#2ecc71';
-
-        ctx.fillRect(
-            -14,
-            -40,
-            28*hp,
-            4
-        );
-    }
-
-
-    ctx.restore();
-}
-
 
 /* =========================================================
    LOOT
 ========================================================= */
 
-function drawLoot(item){
+const loot = [];
 
-    ctx.save();
+function pickup(player){
 
-    ctx.translate(
+  if(!player) return;
+
+  for(
+    let i = loot.length - 1;
+    i >= 0;
+    i--
+  ){
+
+    const item =
+      loot[i];
+
+    if(
+      distance(
+        player.x,
+        player.y,
         item.x,
         item.y
-    );
-
-
-    let emoji =
-        '🪵';
-
-    if(
-        item.type ===
-        'weapon'
+      ) <= 70
     ){
 
-        emoji =
-            item.weapon?.emoji ||
-            '🔫';
+      if(item.type === "ammo"){
 
-    } else if(
-        item.type ===
-        'shield'
-    ){
+        player.ammo =
+          Math.min(
+            player.maxAmmo,
+            player.ammo +
+            (item.amount || 10)
+          );
+      }
 
-        emoji =
-            '🛡️';
+      if(item.type === "shield"){
+
+        player.shield =
+          Math.min(
+            100,
+            player.shield +
+            (item.amount || 25)
+          );
+      }
+
+      loot.splice(i,1);
+
+      return;
     }
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        0,
-        0,
-        14,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fillStyle =
-        'rgba(0,200,255,.18)';
-
-    ctx.fill();
-
-
-    ctx.font =
-        '17px sans-serif';
-
-    ctx.textAlign =
-        'center';
-
-    ctx.fillText(
-        emoji,
-        0,
-        6
-    );
-
-
-    ctx.restore();
+  }
 }
 
-
 /* =========================================================
-   FONDO
+   CHAT
 ========================================================= */
 
-function drawBackground(){
-
-    ctx.fillStyle =
-        '#142331';
-
-    ctx.fillRect(
-        0,
-        0,
-        WORLD,
-        WORLD
-    );
-
-
-    const grid =
-        50;
-
-
-    ctx.strokeStyle =
-        'rgba(255,255,255,.025)';
-
-    ctx.lineWidth =
-        1;
-
-
-    for(
-        let x=0;
-        x<=WORLD;
-        x+=grid
-    ){
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            x,
-            0
-        );
-
-        ctx.lineTo(
-            x,
-            WORLD
-        );
-
-        ctx.stroke();
-    }
-
-
-    for(
-        let y=0;
-        y<=WORLD;
-        y+=grid
-    ){
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            0,
-            y
-        );
-
-        ctx.lineTo(
-            WORLD,
-            y
-        );
-
-        ctx.stroke();
-    }
-}
-
-
-/* =========================================================
-   TORMENTA
-========================================================= */
-
-function drawStorm(){
-
-    ctx.save();
-
-
-    ctx.fillStyle =
-        'rgba(255,30,80,.10)';
-
-    ctx.fillRect(
-        0,
-        0,
-        WORLD,
-        WORLD
-    );
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        storm.cx,
-        storm.cy,
-        storm.radius,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fillStyle =
-        'rgba(20,30,50,.25)';
-
-    ctx.fill();
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        storm.cx,
-        storm.cy,
-        storm.radius,
-        0,
-        Math.PI*2
-    );
-
-    ctx.strokeStyle =
-        '#ff4d6d';
-
-    ctx.lineWidth =
-        5;
-
-    ctx.stroke();
-
-
-    if(
-        storm.targetRadius <
-        storm.radius - 5
-    ){
-
-        ctx.beginPath();
-
-        ctx.arc(
-            storm.cx,
-            storm.cy,
-            storm.targetRadius,
-            0,
-            Math.PI*2
-        );
-
-        ctx.strokeStyle =
-            'rgba(255,200,50,.55)';
-
-        ctx.lineWidth =
-            2;
-
-        ctx.setLineDash(
-            [8,6]
-        );
-
-        ctx.stroke();
-
-        ctx.setLineDash([]);
-    }
-
-
-    ctx.restore();
-}
-
-
-/* =========================================================
-   MINIMAPA
-========================================================= */
-
-function drawMinimap(){
-
-    mctx.clearRect(
-        0,
-        0,
-        120,
-        120
-    );
-
-
-    mctx.fillStyle =
-        '#0d1b2a';
-
-    mctx.fillRect(
-        0,
-        0,
-        120,
-        120
-    );
-
-
-    const scale =
-        120 /
-        WORLD;
-
-
-    mctx.beginPath();
-
-    mctx.arc(
-        storm.cx*scale,
-        storm.cy*scale,
-        storm.radius*scale,
-        0,
-        Math.PI*2
-    );
-
-    mctx.strokeStyle =
-        '#ff4d6d';
-
-    mctx.lineWidth =
-        1.5;
-
-    mctx.stroke();
-
-
-    if(
-        me &&
-        me.alive
-    ){
-
-        mctx.fillStyle =
-            '#2ecc71';
-
-        mctx.beginPath();
-
-        mctx.arc(
-            me.x*scale,
-            me.y*scale,
-            3,
-            0,
-            Math.PI*2
-        );
-
-        mctx.fill();
-    }
-
-
-    for(
-        const p of
-        players.values()
-    ){
-
-        if(!p.alive){
-            continue;
-        }
-
-
-        const same =
-            mySquadId &&
-            p.squadId ===
-            mySquadId;
-
-
-        mctx.fillStyle =
-            same
-                ? '#f1c40f'
-                : '#e74c3c';
-
-
-        mctx.beginPath();
-
-        mctx.arc(
-            p.x*scale,
-            p.y*scale,
-            2.5,
-            0,
-            Math.PI*2
-        );
-
-        mctx.fill();
-    }
-}
-
-
-/* =========================================================
-   PARTÍCULAS
-========================================================= */
-
-function createParticles(
-    x,
-    y,
-    color,
-    count = 8
+function chat(
+  player,
+  message
 ){
 
-    for(
-        let i=0;
-        i<count;
-        i++
-    ){
+  if(!player) return;
 
-        particles.push({
+  message =
+    String(message || "")
+      .trim()
+      .slice(0,100);
 
-            x,
+  if(!message) return;
 
-            y,
+  const party =
+    parties.get(
+      player.partyCode
+    );
 
-            vx:
-                rand(-3,3),
+  if(!party) return;
 
-            vy:
-                rand(-3,3),
+  party.players.forEach(
+    id => {
 
-            life:
-                rand(15,35),
+      const p =
+        getPlayerById(id);
 
-            maxLife:35,
+      if(!p) return;
 
-            color,
-
-            size:
-                rand(2,4)
-        });
+      send(p.ws,{
+        type:"chat",
+        name:player.name,
+        message
+      });
     }
+  );
 }
 
+/* =========================================================
+   EMOTE
+========================================================= */
 
-function updateParticles(){
+function emote(
+  player,
+  value
+){
 
-    for(
-        const p of
-        particles
-    ){
+  if(!player) return;
 
-        p.x +=
-            p.vx;
+  const party =
+    parties.get(
+      player.partyCode
+    );
 
-        p.y +=
-            p.vy;
+  if(!party) return;
 
-        p.life--;
+  party.players.forEach(
+    id => {
+
+      const p =
+        getPlayerById(id);
+
+      if(!p) return;
+
+      send(p.ws,{
+        type:"chat",
+        name:player.name,
+        message:
+          String(value || "")
+            .slice(0,8)
+      });
+    }
+  );
+}
+
+/* =========================================================
+   STATE
+========================================================= */
+
+function createState(
+  partyCode
+){
+
+  const party =
+    parties.get(
+      partyCode
+    );
+
+  if(!party){
+
+    return {
+      players:[],
+      bullets:[],
+      loot:[],
+      walls:[]
+    };
+  }
+
+  const statePlayers = [];
+
+  party.players.forEach(
+    id => {
+
+      const p =
+        getPlayerById(id);
+
+      if(!p) return;
+
+      statePlayers.push({
+
+        id:p.id,
+
+        name:p.name,
+
+        x:p.x,
+
+        y:p.y,
+
+        angle:p.angle,
+
+        hp:p.hp,
+
+        shield:p.shield,
+
+        weapon:p.weapon,
+
+        ammo:p.ammo,
+
+        kills:p.kills,
+
+        alive:p.alive,
+
+        moving:p.moving,
+
+        team:p.team
+      });
+    }
+  );
+
+  return {
+
+    players:
+      statePlayers,
+
+    bullets:
+      bullets.map(b => ({
+        id:b.id,
+        ownerId:b.ownerId,
+        x:b.x,
+        y:b.y
+      })),
+
+    loot:
+      loot.map(item => ({
+        id:item.id,
+        type:item.type,
+        x:item.x,
+        y:item.y,
+        amount:item.amount
+      })),
+
+    walls:
+      walls.map(w => ({
+        id:w.id,
+        x:w.x,
+        y:w.y,
+        width:w.width,
+        height:w.height,
+        ownerId:w.ownerId
+      }))
+  };
+}
+
+/* =========================================================
+   BROADCAST STATES
+========================================================= */
+
+function broadcastStates(){
+
+  const partyStates =
+    new Map();
+
+  for(
+    const player of players.values()
+  ){
+
+    if(!player.partyCode){
+      continue;
     }
 
+    if(
+      !partyStates.has(
+        player.partyCode
+      )
+    ){
 
-    particles =
-        particles.filter(
-            p =>
-                p.life > 0
+      partyStates.set(
+        player.partyCode,
+        createState(
+          player.partyCode
+        )
+      );
+    }
+
+    send(
+      player.ws,
+      {
+        type:"state",
+        ...partyStates.get(
+          player.partyCode
+        )
+      }
+    );
+
+    /*
+     * Después de mandar el estado,
+     * el flag moving vuelve a false.
+     *
+     * El cliente local sigue sabiendo si se
+     * está moviendo por sus propios controles.
+     */
+
+    player.moving = false;
+  }
+}
+
+/* =========================================================
+   WEBSOCKET MESSAGE
+========================================================= */
+
+wss.on(
+  "connection",
+  ws => {
+
+    const player =
+      createPlayer(
+        ws,
+        "Player"
+      );
+
+    send(ws,{
+      type:"joined",
+      player:{
+        id:player.id,
+        name:player.name,
+        x:player.x,
+        y:player.y,
+        hp:player.hp,
+        shield:player.shield,
+        ammo:player.ammo,
+        weapon:player.weapon,
+        angle:player.angle,
+        alive:player.alive
+      }
+    });
+
+    ws.on(
+      "message",
+      raw => {
+
+        let data;
+
+        try{
+
+          data =
+            JSON.parse(
+              raw.toString()
+            );
+
+        }catch(e){
+
+          return;
+        }
+
+        switch(data.type){
+
+          /* -------------------------
+             CREATE PARTY
+          ------------------------- */
+
+          case "createParty":{
+
+            if(player.partyCode){
+              removeFromParty(player);
+            }
+
+            player.name =
+              String(
+                data.name ||
+                "Player"
+              ).slice(0,16);
+
+            createParty(
+              player,
+              data.teamMode
+            );
+
+            break;
+          }
+
+          /* -------------------------
+             JOIN PARTY
+          ------------------------- */
+
+          case "joinParty":{
+
+            player.name =
+              String(
+                data.name ||
+                "Player"
+              ).slice(0,16);
+
+            joinParty(
+              player,
+              data.code
+            );
+
+            break;
+          }
+
+          /* -------------------------
+             READY
+          ------------------------- */
+
+          case "ready":
+
+            toggleReady(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             START
+          ------------------------- */
+
+          case "start":{
+
+            const party =
+              parties.get(
+                player.partyCode
+              );
+
+            if(
+              party &&
+              party.hostId ===
+              player.id
+            ){
+
+              startParty(
+                party
+              );
+            }
+
+            break;
+          }
+
+          /* -------------------------
+             LEAVE
+          ------------------------- */
+
+          case "leaveParty":
+
+            removeFromParty(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             UPDATE
+          ------------------------- */
+
+          case "update":
+
+            updatePlayer(
+              player,
+              data
+            );
+
+            break;
+
+          /* -------------------------
+             SHOOT
+          ------------------------- */
+
+          case "shoot":
+
+            if(
+              typeof data.angle ===
+              "number"
+            ){
+
+              player.angle =
+                data.angle;
+            }
+
+            shoot(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             RELOAD
+          ------------------------- */
+
+          case "reload":
+
+            reload(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             BUILD
+          ------------------------- */
+
+          case "build":
+
+            build(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             PICKAXE
+          ------------------------- */
+
+          case "pickaxe":
+
+            if(
+              typeof data.angle ===
+              "number"
+            ){
+
+              player.angle =
+                data.angle;
+            }
+
+            pickaxe(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             PICKUP
+          ------------------------- */
+
+          case "pickup":
+
+            pickup(
+              player
+            );
+
+            break;
+
+          /* -------------------------
+             CHAT
+          ------------------------- */
+
+          case "chat":
+
+            chat(
+              player,
+              data.message
+            );
+
+            break;
+
+          /* -------------------------
+             EMOTE
+          ------------------------- */
+
+          case "emote":
+
+            emote(
+              player,
+              data.emote
+            );
+
+            break;
+
+          /* -------------------------
+             PING
+          ------------------------- */
+
+          case "ping":
+
+            send(ws,{
+              type:"pong",
+              clientTime:
+                data.clientTime
+            });
+
+            break;
+        }
+      }
+    );
+
+    /* =====================================================
+       CLOSE
+    ===================================================== */
+
+    ws.on(
+      "close",
+      () => {
+
+        removeFromParty(
+          player
         );
-}
 
+        players.delete(
+          ws
+        );
+      }
+    );
+
+    ws.on(
+      "error",
+      () => {
+
+        removeFromParty(
+          player
+        );
+
+        players.delete(
+          ws
+        );
+      }
+    );
+  }
+);
 
 /* =========================================================
    GAME LOOP
 ========================================================= */
 
-function loop(){
+let lastGameUpdate =
+  Date.now();
 
-    if(
-        !gameRunning ||
-        !me
-    ){
-
-        requestAnimationFrame(
-            loop
-        );
-
-        return;
-    }
-
+setInterval(
+  () => {
 
     const now =
-        performance.now();
-
+      Date.now();
 
     const delta =
-        Math.min(
-            .05,
-            (now -
-                lastFrameTime) /
-                1000
-        );
+      now - lastGameUpdate;
 
+    lastGameUpdate =
+      now;
 
-    lastFrameTime =
-        now;
-
-
-    if(
-        me.alive
-    ){
-
-        let dx =
-            (
-                keys['d'] ||
-                keys['D']
-                    ? 1
-                    : 0
-            )
-            -
-            (
-                keys['a'] ||
-                keys['A']
-                    ? 1
-                    : 0
-            );
-
-
-        let dy =
-            (
-                keys['s'] ||
-                keys['S']
-                    ? 1
-                    : 0
-            )
-            -
-            (
-                keys['w'] ||
-                keys['W']
-                    ? 1
-                    : 0
-            );
-
-
-        if(
-            moveJoystick.x ||
-            moveJoystick.y
-        ){
-
-            dx =
-                moveJoystick.x;
-
-            dy =
-                moveJoystick.y;
-        }
-
-
-        const moving =
-            dx !== 0 ||
-            dy !== 0;
-
-
-        if(moving){
-
-            const length =
-                Math.hypot(
-                    dx,
-                    dy
-                ) || 1;
-
-
-            me.x +=
-                (
-                    dx /
-                    length
-                ) *
-                PLAYER_SPEED *
-                delta;
-
-
-            me.y +=
-                (
-                    dy /
-                    length
-                ) *
-                PLAYER_SPEED *
-                delta;
-        }
-
-
-        me.x =
-            clamp(
-                me.x,
-                20,
-                WORLD - 20
-            );
-
-        me.y =
-            clamp(
-                me.y,
-                20,
-                WORLD - 20
-            );
-
-
-        if(
-            !moveJoystick.x &&
-            !moveJoystick.y
-        ){
-
-            me.angle =
-                Math.atan2(
-                    (
-                        mouse.y +
-                        camY()
-                    ) -
-                    me.y,
-
-                    (
-                        mouse.x +
-                        camX()
-                    ) -
-                    me.x
-                );
-        }
-
-
-        if(
-            aimJoystick.x ||
-            aimJoystick.y
-        ){
-
-            me.angle =
-                Math.atan2(
-                    aimJoystick.y,
-                    aimJoystick.x
-                );
-        }
-
-
-        if(
-            moving
-        ){
-
-            me.walkCycle =
-                (me.walkCycle || 0) +
-                delta * 12;
-        }
-
-
-        if(
-            mouse.down
-        ){
-
-            shoot();
-        }
-
-
-        if(
-            now -
-            lastPositionSend >
-            40
-        ){
-
-            lastPositionSend =
-                now;
-
-
-            send({
-
-                type:
-                    'update',
-
-                x:
-                    me.x,
-
-                y:
-                    me.y,
-
-                angle:
-                    me.angle,
-
-                slot:
-                    currentSlot
-            });
-        }
-    }
-
-
-    updateParticles();
-
-    draw();
-
-    requestAnimationFrame(
-        loop
+    updateBullets(
+      delta
     );
-}
 
+    broadcastStates();
+
+  },
+  STATE_INTERVAL
+);
 
 /* =========================================================
-   CÁMARA
+   START SERVER
 ========================================================= */
 
-function camX(){
+server.listen(
+  PORT,
+  () => {
 
-    if(!me){
-        return 0;
-    }
-
-    return me.x -
-        W / 2;
-}
-
-
-function camY(){
-
-    if(!me){
-        return 0;
-    }
-
-    return me.y -
-        H / 2;
-}
-
-
-/* =========================================================
-   DRAW
-========================================================= */
-
-function draw(){
-
-    if(!me){
-        return;
-    }
-
-
-    ctx.clearRect(
-        0,
-        0,
-        W,
-        H
+    console.log(
+      "================================="
     );
 
-
-    const cameraX =
-        camX();
-
-    const cameraY =
-        camY();
-
-
-    ctx.save();
-
-    ctx.translate(
-        -cameraX,
-        -cameraY
+    console.log(
+      " PIXEL ROYALE SERVER"
     );
 
-
-    drawBackground();
-
-
-    // loot
-    for(
-        const item of
-        loot
-    ){
-
-        drawLoot(
-            item
-        );
-    }
-
-
-    // árboles
-    for(
-        const tree of
-        trees
-    ){
-
-        drawTree(
-            tree
-        );
-    }
-
-
-    // paredes
-    for(
-        const wall of
-        walls
-    ){
-
-        ctx.fillStyle =
-            '#65717c';
-
-        ctx.fillRect(
-            wall.x,
-            wall.y,
-            wall.w,
-            wall.h
-        );
-
-
-        ctx.fillStyle =
-            '#83919e';
-
-        ctx.fillRect(
-            wall.x + 3,
-            wall.y + 3,
-            wall.w - 6,
-            5
-        );
-
-
-        ctx.strokeStyle =
-            '#26333e';
-
-        ctx.lineWidth =
-            2;
-
-        ctx.strokeRect(
-            wall.x,
-            wall.y,
-            wall.w,
-            wall.h
-        );
-
-
-        const hp =
-            wall.health /
-            (
-                wall.maxHealth ||
-                150
-            );
-
-
-        ctx.fillStyle =
-            '#222';
-
-        ctx.fillRect(
-            wall.x,
-            wall.y - 7,
-            wall.w,
-            4
-        );
-
-
-        ctx.fillStyle =
-            '#2ecc71';
-
-        ctx.fillRect(
-            wall.x,
-            wall.y - 7,
-            wall.w * hp,
-            4
-        );
-    }
-
-
-    // balas
-    for(
-        const bullet of
-        bullets
-    ){
-
-        ctx.beginPath();
-
-        ctx.arc(
-            bullet.x,
-            bullet.y,
-            bullet.radius ||
-            4,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fillStyle =
-            bullet.color ||
-            '#fff';
-
-        ctx.fill();
-    }
-
-
-    // jugadores
-    for(
-        const p of
-        players.values()
-    ){
-
-        if(
-            p.alive
-        ){
-
-            drawPerson(
-                p.x,
-                p.y,
-                p.angle,
-                p.color,
-                p.walkCycle || 0,
-                p.emote,
-                p.name,
-                false,
-                p.slot || 2,
-                p.weapon
-            );
-        }
-    }
-
-
-    // jugador local
-    if(
-        me.alive
-    ){
-
-        drawPerson(
-            me.x,
-            me.y,
-            me.angle,
-            me.color,
-            me.walkCycle || 0,
-            me.emote,
-            me.name,
-            true,
-            currentSlot,
-            me.weapon
-        );
-    }
-
-
-    // preview construcción
-    if(
-        buildMode &&
-        me.alive
-    ){
-
-        const bx =
-            me.x +
-            Math.cos(me.angle) *
-            55 -
-            20;
-
-        const by =
-            me.y +
-            Math.sin(me.angle) *
-            55 -
-            20;
-
-
-        ctx.fillStyle =
-            me.materials >= 10
-                ? 'rgba(0,200,255,.3)'
-                : 'rgba(255,0,0,.25)';
-
-
-        ctx.fillRect(
-            bx,
-            by,
-            40,
-            40
-        );
-
-
-        ctx.strokeStyle =
-            '#00c6ff';
-
-        ctx.lineWidth =
-            2;
-
-        ctx.strokeRect(
-            bx,
-            by,
-            40,
-            40
-        );
-    }
-
-
-    // partículas
-    for(
-        const p of
-        particles
-    ){
-
-        ctx.globalAlpha =
-            p.life /
-            p.maxLife;
-
-
-        ctx.beginPath();
-
-        ctx.arc(
-            p.x,
-            p.y,
-            p.size,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fillStyle =
-            p.color;
-
-        ctx.fill();
-    }
-
-
-    ctx.globalAlpha =
-        1;
-
-
-    drawStorm();
-
-
-    ctx.restore();
-
-
-    drawMinimap();
-}
-
-
-/* =========================================================
-   KEYBOARD
-========================================================= */
-
-window.addEventListener(
-    'keydown',
-    event => {
-
-        if(
-            document.activeElement &&
-            document.activeElement.id ===
-            'chat-input'
-        ){
-
-            if(
-                event.key ===
-                'Enter'
-            ){
-
-                const input =
-                    document.getElementById(
-                        'chat-input'
-                    );
-
-                if(
-                    input.value.trim()
-                ){
-
-                    send({
-
-                        type:
-                            'chat',
-
-                        message:
-                            input.value.trim()
-                    });
-                }
-
-
-                input.value =
-                    '';
-
-                document
-                    .getElementById(
-                        'chat-input-container'
-                    )
-                    .style.display =
-                    'none';
-            }
-
-            return;
-        }
-
-
-        keys[event.key] =
-            true;
-
-
-        if(
-            event.key === '1'
-        ){
-            setSlot(1);
-        }
-
-
-        if(
-            event.key === '2'
-        ){
-            setSlot(2);
-        }
-
-
-        if(
-            event.key === 'q' ||
-            event.key === 'Q'
-        ){
-
-            buildMode =
-                !buildMode;
-
-            updateHUD();
-        }
-
-
-        if(
-            event.key === ' '
-        ){
-
-            event.preventDefault();
-
-            if(
-                buildMode
-            ){
-
-                buildWall();
-
-            } else {
-
-                swingPickaxe();
-            }
-        }
-
-
-        if(
-            event.key === 'e' ||
-            event.key === 'E'
-        ){
-
-            tryPickup();
-        }
-
-
-        if(
-            event.key === 'Enter'
-        ){
-
-            const container =
-                document
-                    .getElementById(
-                        'chat-input-container'
-                    );
-
-            container.style.display =
-                'block';
-
-            document
-                .getElementById(
-                    'chat-input'
-                )
-                .focus();
-        }
-
-
-        if(
-            event.key === '3'
-        ){
-            doEmote('dance');
-        }
-
-        if(
-            event.key === '4'
-        ){
-            doEmote('wave');
-        }
-
-        if(
-            event.key === '5'
-        ){
-            doEmote('cheer');
-        }
-
-        if(
-            event.key === '6'
-        ){
-            doEmote('laugh');
-        }
-
-        if(
-            event.key === '7'
-        ){
-            doEmote('heart');
-        }
-
-        if(
-            event.key === '8'
-        ){
-            doEmote('thumbs');
-        }
-
-        if(
-            event.key === '9'
-        ){
-            doEmote('cool');
-        }
-
-
-        if(
-            event.key === 'Escape'
-        ){
-
-            buildMode =
-                false;
-
-            updateHUD();
-        }
-    }
+    console.log(
+      " Server running on port " +
+      PORT
+    );
+
+    console.log(
+      " http://localhost:" +
+      PORT
+    );
+
+    console.log(
+      "================================="
+    );
+  }
 );
-
-
-window.addEventListener(
-    'keyup',
-    event => {
-
-        keys[event.key] =
-            false;
-    }
-);
-
-
-/* =========================================================
-   MOUSE
-========================================================= */
-
-canvas.addEventListener(
-    'mousemove',
-    event => {
-
-        const rect =
-            canvas.getBoundingClientRect();
-
-
-        mouse.x =
-            (
-                event.clientX -
-                rect.left
-            ) *
-            (
-                W /
-                rect.width
-            );
-
-
-        mouse.y =
-            (
-                event.clientY -
-                rect.top
-            ) *
-            (
-                H /
-                rect.height
-            );
-    }
-);
-
-
-canvas.addEventListener(
-    'mousedown',
-    event => {
-
-        if(
-            event.button !== 0
-        ){
-            return;
-        }
-
-
-        if(
-            buildMode
-        ){
-
-            buildWall();
-
-        } else if(
-            currentSlot === 1
-        ){
-
-            swingPickaxe();
-
-        } else {
-
-            mouse.down =
-                true;
-
-            shoot();
-        }
-    }
-);
-
-
-canvas.addEventListener(
-    'mouseup',
-    event => {
-
-        if(
-            event.button === 0
-        ){
-
-            mouse.down =
-                false;
-        }
-    }
-);
-
-
-canvas.addEventListener(
-    'mouseleave',
-    () => {
-
-        mouse.down =
-            false;
-    }
-);
-
-
-canvas.addEventListener(
-    'contextmenu',
-    event =>
-        event.preventDefault()
-);
-
-
-/* =========================================================
-   MOBILE FIRE
-========================================================= */
-
-document
-    .getElementById(
-        'mobile-fire'
-    )
-    .addEventListener(
-        'touchstart',
-        event => {
-
-            event.preventDefault();
-
-            mouse.down =
-                true;
-
-            shoot();
-        },
-        {passive:false}
-    );
-
-
-document
-    .getElementById(
-        'mobile-fire'
-    )
-    .addEventListener(
-        'touchend',
-        event => {
-
-            event.preventDefault();
-
-            mouse.down =
-                false;
-        },
-        {passive:false}
-    );
-
-
-document
-    .getElementById(
-        'mobile-pickup'
-    )
-    .addEventListener(
-        'touchstart',
-        event => {
-
-            event.preventDefault();
-
-            tryPickup();
-        },
-        {passive:false}
-    );
-
-
-document
-    .getElementById(
-        'mobile-build'
-    )
-    .addEventListener(
-        'touchstart',
-        event => {
-
-            event.preventDefault();
-
-            buildMode =
-                !buildMode;
-
-            updateHUD();
-        },
-        {passive:false}
-    );
-
-
-/* =========================================================
-   JOYSTICKS
-========================================================= */
-
-function setupJoystick(
-    element,
-    knob,
-    output
-){
-
-    let active =
-        false;
-
-
-    function update(
-        clientX,
-        clientY
-    ){
-
-        const rect =
-            element.getBoundingClientRect();
-
-
-        const cx =
-            rect.left +
-            rect.width /
-            2;
-
-        const cy =
-            rect.top +
-            rect.height /
-            2;
-
-
-        let x =
-            clientX -
-            cx;
-
-        let y =
-            clientY -
-            cy;
-
-
-        const max =
-            rect.width /
-            2 -
-            20;
-
-
-        const length =
-            Math.hypot(
-                x,
-                y
-            );
-
-
-        if(
-            length >
-            max
-        ){
-
-            x =
-                x /
-                length *
-                max;
-
-            y =
-                y /
-                length *
-                max;
-        }
-
-
-        knob.style.transform =
-            `translate(${x}px,${y}px)`;
-
-
-        output.x =
-            x / max;
-
-        output.y =
-            y / max;
-    }
-
-
-    function reset(){
-
-        active =
-            false;
-
-        output.x =
-            0;
-
-        output.y =
-            0;
-
-        knob.style.transform =
-            'translate(0,0)';
-    }
-
-
-    element.addEventListener(
-        'touchstart',
-        event => {
-
-            active =
-                true;
-
-            const t =
-                event.touches[0];
-
-            update(
-                t.clientX,
-                t.clientY
-            );
-
-        },
-        {passive:true}
-    );
-
-
-    element.addEventListener(
-        'touchmove',
-        event => {
-
-            if(!active){
-                return;
-            }
-
-            const t =
-                event.touches[0];
-
-            update(
-                t.clientX,
-                t.clientY
-            );
-
-        },
-        {passive:true}
-    );
-
-
-    element.addEventListener(
-        'touchend',
-        reset,
-        {passive:true}
-    );
-
-    element.addEventListener(
-        'touchcancel',
-        reset,
-        {passive:true}
-    );
-}
-
-
-setupJoystick(
-    document.getElementById(
-        'move-stick'
-    ),
-    document.getElementById(
-        'move-knob'
-    ),
-    moveJoystick
-);
-
-
-setupJoystick(
-    document.getElementById(
-        'aim-stick'
-    ),
-    document.getElementById(
-        'aim-knob'
-    ),
-    aimJoystick
-);
-
-
-/* =========================================================
-   END MATCH
-========================================================= */
-
-function showMatchEnd(data){
-
-    gameState =
-        'ended';
-
-    gameRunning =
-        false;
-
-
-    document
-        .getElementById(
-            'hud'
-        )
-        .style.display =
-        'none';
-
-    document
-        .getElementById(
-            'player-list'
-        )
-        .style.display =
-        'none';
-
-    document
-        .getElementById(
-            'hotbar'
-        )
-        .style.display =
-        'none';
-
-    document
-        .getElementById(
-            'emote-bar'
-        )
-        .style.display =
-        'none';
-
-    document
-        .getElementById(
-            'minimap'
-        )
-        .style.display =
-        'none';
-
-
-    document
-        .getElementById(
-            'status'
-        )
-        .style.display =
-        'flex';
-
-    document
-        .getElementById(
-            'lobby-section'
-        )
-        .style.display =
-        'none';
-
-    document
-        .getElementById(
-            'end-section'
-        )
-        .style.display =
-        'block';
-
-
-    let winnerText =
-        '🏆 Partida terminada';
-
-
-    if(
-        data.winner
-    ){
-
-        if(
-            data.winner.type ===
-            'solo'
-        ){
-
-            winnerText =
-                '🏆 ¡Ganador: ' +
-                data.winner.name +
-                '!';
-
-        } else if(
-            data.winner.type ===
-            'squad'
-        ){
-
-            winnerText =
-                '🏆 ¡Escuadrón ganador! ' +
-                data.winner.name;
-        }
-    }
-
-
-    document
-        .getElementById(
-            'winner-text'
-        )
-        .textContent =
-        winnerText;
-
-
-    const mine =
-        (
-            data.players ||
-            []
-        ).find(
-            p =>
-                p.id ===
-                myId
-        );
-
-
-    const myXp =
-        mine
-            ? mine.xp || 0
-            : 0;
-
-
-    totalXp +=
-        myXp;
-
-
-    document
-        .getElementById(
-            'total-xp'
-        )
-        .textContent =
-        totalXp;
-
-
-    document
-        .getElementById(
-            'xp-result'
-        )
-        .textContent =
-        '+' +
-        myXp +
-        ' XP · Total: ' +
-        totalXp;
-
-
-    let html =
-        '';
-
-
-    (
-        data.players ||
-        []
-    )
-        .slice()
-        .sort(
-            (a,b) =>
-                b.kills -
-                a.kills
-        )
-        .forEach(
-            p => {
-
-                html +=
-                    `<div style="padding:4px 0">
-                        ${p.alive ? '👑' : '💀'}
-                        ${escapeHtml(p.name)}
-                        —
-                        ${p.kills} eliminaciones
-                        · +${p.xp || 0} XP
-                    </div>`;
-            }
-        );
-
-
-    document
-        .getElementById(
-            'match-stats'
-        )
-        .innerHTML =
-        html;
-}
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function distanceBetween(
-    x1,
-    y1,
-    x2,
-    y2
-){
-
-    return Math.hypot(
-        x2-x1,
-        y2-y1
-    );
-}
-
-
-function escapeHtml(value){
-
-    return String(
-        value || ''
-    )
-        .replace(
-            /&/g,
-            '&amp;'
-        )
-        .replace(
-            /</g,
-            '&lt;'
-        )
-        .replace(
-            />/g,
-            '&gt;'
-        )
-        .replace(
-            /"/g,
-            '&quot;'
-        )
-        .replace(
-            /'/g,
-            '&#039;'
-        );
-}
-
-
-/* =========================================================
-   ARRANQUE
-========================================================= */
-
-requestAnimationFrame(
-    loop
-);
-
-</script>
-
-</body>
-</html>
