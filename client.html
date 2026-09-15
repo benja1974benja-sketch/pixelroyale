@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -48,9 +49,7 @@ canvas{
   image-rendering:crisp-edges;
 }
 
-/* =========================
-   HUD
-========================= */
+/* HUD */
 
 #hud{
   position:fixed;
@@ -152,9 +151,7 @@ canvas{
   background:rgba(70,130,255,.2);
 }
 
-/* =========================
-   CHAT
-========================= */
+/* CHAT */
 
 #chat{
   position:fixed;
@@ -202,9 +199,7 @@ canvas{
   font-weight:bold;
 }
 
-/* =========================
-   HOTBAR
-========================= */
+/* HOTBAR */
 
 #hotbar{
   position:fixed;
@@ -265,9 +260,7 @@ canvas{
   font-weight:bold;
 }
 
-/* =========================
-   ACTION / EMOTES
-========================= */
+/* ACTION / EMOTES */
 
 #actionButton{
   position:fixed;
@@ -299,9 +292,7 @@ canvas{
   font-size:18px;
 }
 
-/* =========================
-   CONNECTION
-========================= */
+/* CONNECTION */
 
 #connection{
   position:fixed;
@@ -320,9 +311,7 @@ canvas{
   background:#249a50;
 }
 
-/* =========================
-   LOBBY
-========================= */
+/* LOBBY */
 
 #lobby{
   position:fixed;
@@ -446,9 +435,7 @@ canvas{
   font-size:13px;
 }
 
-/* =========================
-   COUNTDOWN / END
-========================= */
+/* COUNTDOWN / END */
 
 #countdownOverlay,
 #endOverlay{
@@ -482,9 +469,7 @@ canvas{
   color:#d8dee8;
 }
 
-/* =========================
-   MOBILE CONTROLS
-========================= */
+/* MOBILE */
 
 #mobileControls{
   display:none;
@@ -576,6 +561,7 @@ canvas{
 }
 
 @media(max-width:800px){
+
   #playerList{
     display:none;
   }
@@ -625,63 +611,103 @@ canvas{
 
 <div id="hud">
   <div id="playerCard">
-    <div id="playerName">Jugador</div>
 
-    <div style="font-size:10px;color:#9fa9b8;">VIDA</div>
+    <div id="playerName">
+      Jugador
+    </div>
+
+    <div style="font-size:10px;color:#9fa9b8;">
+      VIDA
+    </div>
+
     <div class="bar">
       <div id="hpBar"></div>
     </div>
 
-    <div style="font-size:10px;color:#9fa9b8;margin-top:4px;">ESCUDO</div>
+    <div style="font-size:10px;color:#9fa9b8;margin-top:4px;">
+      ESCUDO
+    </div>
+
     <div class="bar">
       <div id="shieldBar"></div>
     </div>
 
     <div id="stats">
-      Kills: <span id="kills">0</span>
+      Kills:
+      <span id="kills">0</span>
       &nbsp; | &nbsp;
-      Ping: <span id="ping">--</span>
+      Ping:
+      <span id="ping">--</span>
     </div>
+
   </div>
 </div>
 
 <div id="topCenter">
-  <div id="aliveCount">Esperando partida...</div>
+  <div id="aliveCount">
+    Esperando partida...
+  </div>
 </div>
 
 <div id="playerList">
-  <div id="playerListTitle">JUGADORES</div>
+
+  <div id="playerListTitle">
+    JUGADORES
+  </div>
+
   <div id="players"></div>
+
 </div>
 
 <div id="chat"></div>
 
 <div id="chatInputBox">
-  <input id="chatInput" maxlength="100" placeholder="Escribe un mensaje...">
-  <button id="chatSend">Enviar</button>
+
+  <input
+    id="chatInput"
+    maxlength="100"
+    placeholder="Escribe un mensaje..."
+  >
+
+  <button id="chatSend">
+    Enviar
+  </button>
+
 </div>
 
 <div id="hotbar">
 
-  <div class="slot active" data-slot="1">
+  <div
+    class="slot active"
+    data-slot="1"
+  >
     <span class="slotKey">1</span>
     <span class="slotIcon">🔫</span>
     <span class="slotName">Rifle</span>
   </div>
 
-  <div class="slot" data-slot="2">
+  <div
+    class="slot"
+    data-slot="2"
+  >
     <span class="slotKey">2</span>
     <span class="slotIcon">💥</span>
     <span class="slotName">Escopeta</span>
   </div>
 
-  <div class="slot" data-slot="3">
+  <div
+    class="slot"
+    data-slot="3"
+  >
     <span class="slotKey">3</span>
     <span class="slotIcon">🧱</span>
     <span class="slotName">Build</span>
   </div>
 
-  <div class="slot" data-slot="4">
+  <div
+    class="slot"
+    data-slot="4"
+  >
     <span class="slotKey">4</span>
     <span class="slotIcon">⛏️</span>
     <span class="slotName">Pickaxe</span>
@@ -690,32 +716,95 @@ canvas{
 </div>
 
 <div id="ammo">
-  Munición: <span id="ammoCount">--</span>
+  Munición:
+  <span id="ammoCount">--</span>
 </div>
 
-<button id="actionButton">Recoger</button>
+<button id="actionButton">
+  Recoger
+</button>
 
 <div id="emotes">
-  <button class="emote" data-emote="😀">😀</button>
-  <button class="emote" data-emote="😂">😂</button>
-  <button class="emote" data-emote="😎">😎</button>
+
+  <button
+    class="emote"
+    data-emote="😀"
+  >
+    😀
+  </button>
+
+  <button
+    class="emote"
+    data-emote="😂"
+  >
+    😂
+  </button>
+
+  <button
+    class="emote"
+    data-emote="😎"
+  >
+    😎
+  </button>
+
 </div>
 
 <div id="mobileControls">
 
-  <div class="joystick" id="moveJoystick">
-    <div class="stick" id="moveStick"></div>
+  <div
+    class="joystick"
+    id="moveJoystick"
+  >
+    <div
+      class="stick"
+      id="moveStick"
+    ></div>
   </div>
 
-  <div class="joystick" id="aimJoystick">
-    <div class="stick" id="aimStick"></div>
+  <div
+    class="joystick"
+    id="aimJoystick"
+  >
+    <div
+      class="stick"
+      id="aimStick"
+    ></div>
   </div>
 
-  <button class="mobileButton" id="fireButton">FIRE</button>
-  <button class="mobileButton" id="reloadButton">R</button>
-  <button class="mobileButton" id="buildButton">BUILD</button>
-  <button class="mobileButton" id="pickaxeButton">⛏</button>
-  <button class="mobileButton" id="pickupButton">E</button>
+  <button
+    class="mobileButton"
+    id="fireButton"
+  >
+    FIRE
+  </button>
+
+  <button
+    class="mobileButton"
+    id="reloadButton"
+  >
+    R
+  </button>
+
+  <button
+    class="mobileButton"
+    id="buildButton"
+  >
+    BUILD
+  </button>
+
+  <button
+    class="mobileButton"
+    id="pickaxeButton"
+  >
+    ⛏
+  </button>
+
+  <button
+    class="mobileButton"
+    id="pickupButton"
+  >
+    E
+  </button>
 
 </div>
 
@@ -723,8 +812,13 @@ canvas{
 
   <div id="lobbyPanel">
 
-    <div id="logo">PIXEL ROYALE</div>
-    <div id="subtitle">Battle Royale 2D</div>
+    <div id="logo">
+      PIXEL ROYALE
+    </div>
+
+    <div id="subtitle">
+      Battle Royale 2D
+    </div>
 
     <input
       id="nameInput"
@@ -734,21 +828,41 @@ canvas{
       value="Player"
     >
 
-    <select id="teamMode" class="select">
-      <option value="solo">Solo</option>
-      <option value="duo">Dúos</option>
-      <option value="squad">Squads</option>
+    <select
+      id="teamMode"
+      class="select"
+    >
+      <option value="solo">
+        Solo
+      </option>
+
+      <option value="duo">
+        Dúos
+      </option>
+
+      <option value="squad">
+        Squads
+      </option>
     </select>
 
-    <button id="createParty" class="button primary">
+    <button
+      id="createParty"
+      class="button primary"
+    >
       Crear partida
     </button>
 
-    <button id="joinParty" class="button gray">
+    <button
+      id="joinParty"
+      class="button gray"
+    >
       Unirse con código
     </button>
 
-    <div id="joinBox" class="hidden">
+    <div
+      id="joinBox"
+      class="hidden"
+    >
 
       <input
         id="partyCodeInput"
@@ -757,31 +871,52 @@ canvas{
         placeholder="Código de partida"
       >
 
-      <button id="confirmJoin" class="button green">
+      <button
+        id="confirmJoin"
+        class="button green"
+      >
         Unirse
       </button>
 
     </div>
 
-    <div id="partyPanel" class="partyBox hidden">
+    <div
+      id="partyPanel"
+      class="partyBox hidden"
+    >
 
       <div class="partyTitle">
-        Sala: <span id="partyCode">----</span>
+        Sala:
+        <span id="partyCode">
+          ----
+        </span>
       </div>
 
-      <div class="partyPlayers" id="partyPlayers">
+      <div
+        class="partyPlayers"
+        id="partyPlayers"
+      >
         Esperando jugadores...
       </div>
 
-      <button id="readyButton" class="button green">
+      <button
+        id="readyButton"
+        class="button green"
+      >
         LISTO
       </button>
 
-      <button id="startButton" class="button primary hidden">
+      <button
+        id="startButton"
+        class="button primary hidden"
+      >
         INICIAR PARTIDA
       </button>
 
-      <button id="leaveButton" class="button red">
+      <button
+        id="leaveButton"
+        class="button red"
+      >
         SALIR
       </button>
 
@@ -792,15 +927,32 @@ canvas{
   </div>
 </div>
 
-<div id="countdownOverlay" class="hidden">
-  <div id="countdownText">3</div>
+<div
+  id="countdownOverlay"
+  class="hidden"
+>
+  <div id="countdownText">
+    3
+  </div>
 </div>
 
-<div id="endOverlay" class="hidden">
-  <div id="endTitle">VICTORIA</div>
-  <div id="endSubtitle">Has ganado la partida</div>
+<div
+  id="endOverlay"
+  class="hidden"
+>
+  <div id="endTitle">
+    VICTORIA
+  </div>
 
-  <button id="playAgain" class="button primary" style="width:220px;">
+  <div id="endSubtitle">
+    Has ganado la partida
+  </div>
+
+  <button
+    id="playAgain"
+    class="button primary"
+    style="width:220px;"
+  >
     JUGAR OTRA VEZ
   </button>
 </div>
@@ -808,15 +960,17 @@ canvas{
 <script>
 "use strict";
 
-/* =========================================================
-   CONFIG
-========================================================= */
+/* CONFIG */
 
 const canvas =
-  document.getElementById("canvas");
+  document.getElementById(
+    "canvas"
+  );
 
 const ctx =
-  canvas.getContext("2d");
+  canvas.getContext(
+    "2d"
+  );
 
 const W = 1100;
 const H = 700;
@@ -828,9 +982,7 @@ const POSITION_SEND_RATE = 40;
 const EMOTE_DURATION = 2000;
 const PICKAXE_DURATION = 350;
 
-/* =========================================================
-   WEBSOCKET
-========================================================= */
+/* WEBSOCKET */
 
 let socket = null;
 let connected = false;
@@ -842,19 +994,27 @@ function getServerURL(){
       ? "wss://"
       : "ws://";
 
-  return protocol + location.host;
+  return (
+    protocol +
+    location.host
+  );
 }
 
 function connect(){
 
   try{
+
     socket =
       new WebSocket(
         getServerURL()
       );
+
   }catch(e){
 
-    setConnection(false);
+    setConnection(
+      false
+    );
+
     return;
   }
 
@@ -862,7 +1022,9 @@ function connect(){
 
     connected = true;
 
-    setConnection(true);
+    setConnection(
+      true
+    );
 
     const savedName =
       localStorage.getItem(
@@ -872,8 +1034,11 @@ function connect(){
     if(savedName){
 
       document
-        .getElementById("nameInput")
-        .value = savedName;
+        .getElementById(
+          "nameInput"
+        )
+        .value =
+        savedName;
     }
   };
 
@@ -881,36 +1046,50 @@ function connect(){
 
     connected = false;
 
-    setConnection(false);
+    setConnection(
+      false
+    );
 
-    setTimeout(() => {
+    setTimeout(
+      () => {
 
-      if(!connected){
-        connect();
-      }
+        if(!connected){
+          connect();
+        }
 
-    },2000);
+      },
+      2000
+    );
   };
 
   socket.onerror = () => {
-    setConnection(false);
+
+    setConnection(
+      false
+    );
   };
 
-  socket.onmessage = event => {
+  socket.onmessage =
+    event => {
 
-    let msg;
+      let msg;
 
-    try{
-      msg =
-        JSON.parse(
-          event.data
-        );
-    }catch(e){
-      return;
-    }
+      try{
 
-    handleMessage(msg);
-  };
+        msg =
+          JSON.parse(
+            event.data
+          );
+
+      }catch(e){
+
+        return;
+      }
+
+      handleMessage(
+        msg
+      );
+    };
 }
 
 function send(data){
@@ -922,12 +1101,16 @@ function send(data){
   ){
 
     socket.send(
-      JSON.stringify(data)
+      JSON.stringify(
+        data
+      )
     );
   }
 }
 
-function setConnection(ok){
+function setConnection(
+  ok
+){
 
   const el =
     document.getElementById(
@@ -950,9 +1133,7 @@ function setConnection(ok){
       : "block";
 }
 
-/* =========================================================
-   PLAYER STATE
-========================================================= */
+/* PLAYER STATE */
 
 let me = null;
 
@@ -970,9 +1151,11 @@ let serverPosition = {
   y:0
 };
 
-let movementInitialized = false;
+let movementInitialized =
+  false;
 
 let lastPositionSend = 0;
+
 let lastFrameTime =
   performance.now();
 
@@ -981,17 +1164,20 @@ let playerAnimationTime = 0;
 let selectedSlot = 1;
 
 let kills = 0;
+
 let ping = 0;
 
 let lastPickaxeSwing = 0;
 
-/* =========================================================
-   MESSAGE HANDLER
-========================================================= */
+/* MESSAGE HANDLER */
 
-function handleMessage(msg){
+function handleMessage(
+  msg
+){
 
-  switch(msg.type){
+  switch(
+    msg.type
+  ){
 
     case "joined":
 
@@ -999,7 +1185,12 @@ function handleMessage(msg){
         ...msg.player,
 
         emote:null,
-        selectedSlot:1,
+
+        selectedSlot:
+          msg.player
+            .selectedSlot ||
+          1,
+
         pickaxeUntil:0
       };
 
@@ -1012,47 +1203,86 @@ function handleMessage(msg){
       movementInitialized =
         true;
 
-      if(msg.partyCode){
+      if(
+        msg.partyCode
+      ){
+
         updatePartyCode(
           msg.partyCode
         );
       }
 
+      updateHUD();
+
+      break;
+
+    case "party":{
+
+      const party =
+        msg.party ||
+        msg;
+
+      if(
+        party.code
+      ){
+
+        updatePartyCode(
+          party.code
+        );
+      }
+
+      if(
+        Array.isArray(
+          party.players
+        )
+      ){
+
+        updatePartyPlayers(
+          party.players
+        );
+      }
+
+      if(
+        party.hostId != null
+      ){
+
+        updateHostControls(
+          party.hostId
+        );
+      }
+
       showLobbyParty();
 
-      break;
+      if(
+        party.started
+      ){
 
-    case "party":
-
-      if(msg.code){
-        updatePartyCode(
-          msg.code
-        );
-      }
-
-      if(msg.players){
-        updatePartyPlayers(
-          msg.players
-        );
-      }
-
-      if(msg.hostId){
-        updateHostControls(
-          msg.hostId
-        );
+        startMatch({
+          player:
+            findMyPlayerFromParty(
+              party.players
+            )
+        });
       }
 
       break;
+    }
 
     case "lobby":
 
-      if(msg.players){
+      if(
+        msg.players
+      ){
+
         updatePartyPlayers(
           msg.players
         );
       }
 
-      if(msg.code){
+      if(
+        msg.code
+      ){
+
         updatePartyCode(
           msg.code
         );
@@ -1068,31 +1298,59 @@ function handleMessage(msg){
 
       break;
 
+    /*
+     * INICIO REAL DE LA PARTIDA
+     */
     case "start":
 
-      startMatch(msg);
+      startMatch(
+        msg
+      );
+
+      break;
+
+    /*
+     * Compatibilidad con el
+     * mensaje antiguo.
+     */
+    case "gameStarted":
+
+      if(
+        msg.started
+      ){
+
+        startMatch(
+          msg
+        );
+      }
 
       break;
 
     case "state":
 
-      handleState(msg);
+      handleState(
+        msg
+      );
 
       break;
 
-    /*
-     * EMOTE REAL
-     */
     case "emote":{
+
+      const targetId =
+        msg.playerId ??
+        msg.id;
 
       const target =
         players.find(
-          p => p.id === msg.id
+          p =>
+            p.id ===
+            targetId
         );
 
       if(
         me &&
-        msg.id === me.id
+        targetId ===
+          me.id
       ){
 
         me.emote =
@@ -1130,8 +1388,12 @@ function handleMessage(msg){
 
       if(
         me &&
-        msg.killerId ===
-          me.id
+        (
+          msg.killerId ===
+            me.id ||
+          msg.attackerId ===
+            me.id
+        )
       ){
 
         kills++;
@@ -1150,7 +1412,9 @@ function handleMessage(msg){
 
     case "pong":
 
-      if(msg.clientTime){
+      if(
+        msg.clientTime
+      ){
 
         ping =
           Date.now() -
@@ -1170,11 +1434,58 @@ function handleMessage(msg){
   }
 }
 
-/* =========================================================
-   STATE
-========================================================= */
+function findMyPlayerFromParty(
+  list
+){
 
-function handleState(msg){
+  if(
+    !Array.isArray(list) ||
+    !me
+  ){
+
+    return null;
+  }
+
+  const found =
+    list.find(
+      p =>
+        p.id ===
+        me.id
+    );
+
+  if(!found){
+    return null;
+  }
+
+  return {
+    ...me,
+    ...found,
+
+    x:
+      me.x ||
+      300,
+
+    y:
+      me.y ||
+      300,
+
+    hp:100,
+
+    shield:50,
+
+    ammo:30,
+
+    alive:true,
+
+    selectedSlot:1
+  };
+}
+
+/* STATE */
+
+function handleState(
+  msg
+){
 
   if(
     Array.isArray(
@@ -1190,7 +1501,8 @@ function handleState(msg){
       const serverMe =
         players.find(
           p =>
-            p.id === me.id
+            p.id ===
+            me.id
         );
 
       if(serverMe){
@@ -1225,10 +1537,10 @@ function handleState(msg){
           serverMe.alive ??
           me.alive;
 
-        /*
-         * El servidor puede sincronizar
-         * el slot actual.
-         */
+        me.kills =
+          serverMe.kills ??
+          me.kills;
+
         if(
           serverMe.selectedSlot
         ){
@@ -1240,16 +1552,21 @@ function handleState(msg){
             serverMe.selectedSlot;
 
           document
-            .querySelectorAll(".slot")
-            .forEach(el => {
+            .querySelectorAll(
+              ".slot"
+            )
+            .forEach(
+              el => {
 
-              el.classList.toggle(
-                "active",
-                Number(
-                  el.dataset.slot
-                ) === selectedSlot
-              );
-            });
+                el.classList.toggle(
+                  "active",
+                  Number(
+                    el.dataset.slot
+                  ) ===
+                    selectedSlot
+                );
+              }
+            );
         }
 
         if(
@@ -1260,9 +1577,16 @@ function handleState(msg){
             serverMe.emote;
 
           me.emoteUntil =
-            Date.now() +
-            EMOTE_DURATION;
+            serverMe.emoteUntil ||
+            (
+              Date.now() +
+              EMOTE_DURATION
+            );
         }
+
+        me.pickaxeUntil =
+          serverMe.pickaxeUntil ||
+          0;
 
         const error =
           Math.hypot(
@@ -1272,7 +1596,9 @@ function handleState(msg){
               me.y
           );
 
-        if(error > 200){
+        if(
+          error > 200
+        ){
 
           me.x =
             serverPosition.x;
@@ -1317,9 +1643,7 @@ function handleState(msg){
   updateHUD();
 }
 
-/* =========================================================
-   LOBBY
-========================================================= */
+/* LOBBY */
 
 const lobby =
   document.getElementById(
@@ -1331,21 +1655,25 @@ const lobbyStatus =
     "lobbyStatus"
   );
 
-function setLobbyStatus(text){
+function setLobbyStatus(
+  text
+){
 
   lobbyStatus.textContent =
     text;
 }
 
-function updatePartyCode(code){
+function updatePartyCode(
+  code
+){
 
   document
     .getElementById(
       "partyCode"
     )
     .textContent =
-      code ||
-      "----";
+    code ||
+    "----";
 }
 
 function showLobbyParty(){
@@ -1359,7 +1687,9 @@ function showLobbyParty(){
     );
 }
 
-function updatePartyPlayers(list){
+function updatePartyPlayers(
+  list
+){
 
   if(
     !Array.isArray(list)
@@ -1372,33 +1702,40 @@ function updatePartyPlayers(list){
       "partyPlayers"
     );
 
-  box.innerHTML = "";
+  box.innerHTML =
+    "";
 
-  list.forEach(player => {
+  list.forEach(
+    player => {
 
-    const row =
-      document.createElement(
-        "div"
+      const row =
+        document.createElement(
+          "div"
+        );
+
+      const ready =
+        player.ready
+          ? '<span class="ready">LISTO</span>'
+          : '<span class="notReady">NO LISTO</span>';
+
+      row.innerHTML =
+        escapeHTML(
+          player.name ||
+            "Player"
+        ) +
+        " — " +
+        ready;
+
+      box.appendChild(
+        row
       );
-
-    const ready =
-      player.ready
-        ? '<span class="ready">LISTO</span>'
-        : '<span class="notReady">NO LISTO</span>';
-
-    row.innerHTML =
-      escapeHTML(
-        player.name ||
-          "Player"
-      ) +
-      " — " +
-      ready;
-
-    box.appendChild(row);
-  });
+    }
+  );
 }
 
-function updateHostControls(hostId){
+function updateHostControls(
+  hostId
+){
 
   if(!me) return;
 
@@ -1407,7 +1744,10 @@ function updateHostControls(hostId){
       "startButton"
     );
 
-  if(me.id === hostId){
+  if(
+    me.id ===
+    hostId
+  ){
 
     start.classList.remove(
       "hidden"
@@ -1421,6 +1761,9 @@ function updateHostControls(hostId){
   }
 }
 
+/*
+ * CREAR PARTIDA
+ */
 document
   .getElementById(
     "createParty"
@@ -1428,6 +1771,15 @@ document
   .addEventListener(
     "click",
     () => {
+
+      if(!connected){
+
+        setLobbyStatus(
+          "Conectando al servidor..."
+        );
+
+        return;
+      }
 
       const name =
         document
@@ -1451,8 +1803,11 @@ document
       );
 
       send({
-        type:"createParty",
+        type:
+          "createParty",
+
         name,
+
         teamMode
       });
 
@@ -1462,6 +1817,9 @@ document
     }
   );
 
+/*
+ * MOSTRAR JOIN
+ */
 document
   .getElementById(
     "joinParty"
@@ -1480,6 +1838,9 @@ document
     }
   );
 
+/*
+ * UNIRSE
+ */
 document
   .getElementById(
     "confirmJoin"
@@ -1487,6 +1848,15 @@ document
   .addEventListener(
     "click",
     () => {
+
+      if(!connected){
+
+        setLobbyStatus(
+          "Conectando al servidor..."
+        );
+
+        return;
+      }
 
       const name =
         document
@@ -1521,8 +1891,11 @@ document
       );
 
       send({
-        type:"joinParty",
+        type:
+          "joinParty",
+
         name,
+
         code
       });
 
@@ -1532,6 +1905,9 @@ document
     }
   );
 
+/*
+ * READY
+ */
 document
   .getElementById(
     "readyButton"
@@ -1541,11 +1917,21 @@ document
     () => {
 
       send({
-        type:"ready"
+        type:
+          "ready",
+
+        ready:true
       });
+
+      setLobbyStatus(
+        "Listo."
+      );
     }
   );
 
+/*
+ * START
+ */
 document
   .getElementById(
     "startButton"
@@ -1555,11 +1941,19 @@ document
     () => {
 
       send({
-        type:"start"
+        type:
+          "start"
       });
+
+      setLobbyStatus(
+        "Iniciando partida..."
+      );
     }
   );
 
+/*
+ * LEAVE
+ */
 document
   .getElementById(
     "leaveButton"
@@ -1569,18 +1963,19 @@ document
     () => {
 
       send({
-        type:"leaveParty"
+        type:
+          "leaveParty"
       });
 
       location.reload();
     }
   );
 
-/* =========================================================
-   COUNTDOWN
-========================================================= */
+/* COUNTDOWN */
 
-function showCountdown(value){
+function showCountdown(
+  value
+){
 
   const overlay =
     document.getElementById(
@@ -1600,27 +1995,34 @@ function showCountdown(value){
     value;
 
   if(
-    Number(value) <= 0
+    Number(value) <=
+    0
   ){
 
-    setTimeout(() => {
+    setTimeout(
+      () => {
 
-      overlay.classList.add(
-        "hidden"
-      );
+        overlay.classList.add(
+          "hidden"
+        );
 
-    },400);
+      },
+      400
+    );
   }
 }
 
-/* =========================================================
-   START GAME
-========================================================= */
+/* START GAME */
 
-function startMatch(data){
+function startMatch(
+  data
+){
 
-  gameStarted = true;
-  gameEnded = false;
+  gameStarted =
+    true;
+
+  gameEnded =
+    false;
 
   lobby.classList.add(
     "hidden"
@@ -1637,7 +2039,8 @@ function startMatch(data){
   lastFrameTime =
     performance.now();
 
-  lastPositionSend = 0;
+  lastPositionSend =
+    0;
 
   if(
     data &&
@@ -1645,14 +2048,26 @@ function startMatch(data){
   ){
 
     me = {
+      ...me,
       ...data.player,
 
-      emote:null,
-      selectedSlot:1,
-      pickaxeUntil:0
+      emote:
+        data.player.emote ||
+        null,
+
+      selectedSlot:
+        data.player
+          .selectedSlot ||
+        1,
+
+      pickaxeUntil:
+        data.player
+          .pickaxeUntil ||
+        0
     };
 
-    selectedSlot = 1;
+    selectedSlot =
+      me.selectedSlot;
 
     serverPosition.x =
       me.x;
@@ -1663,11 +2078,15 @@ function startMatch(data){
     movementInitialized =
       true;
   }
+
+  setLobbyStatus(
+    ""
+  );
+
+  updateHUD();
 }
 
-/* =========================================================
-   HUD
-========================================================= */
+/* HUD */
 
 function updateHUD(){
 
@@ -1678,71 +2097,74 @@ function updateHUD(){
       "playerName"
     )
     .textContent =
-      me.name ||
-      "Player";
+    me.name ||
+    "Player";
 
   document
     .getElementById(
       "hpBar"
     )
     .style.width =
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Number(
-            me.hp ??
-            100
-          )
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Number(
+          me.hp ??
+          100
         )
-      ) +
-      "%";
+      )
+    ) +
+    "%";
 
   document
     .getElementById(
       "shieldBar"
     )
     .style.width =
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Number(
-            me.shield ??
-            0
-          )
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Number(
+          me.shield ??
+          0
         )
-      ) +
-      "%";
+      )
+    ) +
+    "%";
 
   document
     .getElementById(
       "kills"
     )
     .textContent =
-      kills;
+    me.kills ??
+    kills;
 
   document
     .getElementById(
       "ping"
     )
     .textContent =
-      ping
-        ? ping + "ms"
-        : "--";
+    ping
+      ? ping +
+        "ms"
+      : "--";
 
   document
     .getElementById(
       "ammoCount"
     )
     .textContent =
-      me.ammo ??
-      "--";
+    me.ammo ??
+    "--";
 
   const alive =
     players.filter(
       p =>
-        p.alive !== false
+        p.alive !==
+        false
     ).length;
 
   document
@@ -1750,10 +2172,10 @@ function updateHUD(){
       "aliveCount"
     )
     .textContent =
-      gameStarted
-        ? "Jugadores: " +
-          alive
-        : "Esperando partida...";
+    gameStarted
+      ? "Jugadores: " +
+        alive
+      : "Esperando partida...";
 
   updatePlayerList();
 }
@@ -1765,46 +2187,55 @@ function updatePlayerList(){
       "players"
     );
 
-  box.innerHTML = "";
+  box.innerHTML =
+    "";
 
-  players.forEach(p => {
+  players.forEach(
+    p => {
 
-    const row =
-      document.createElement(
-        "div"
+      const row =
+        document.createElement(
+          "div"
+        );
+
+      row.className =
+        "playerRow" +
+        (
+          me &&
+          p.id ===
+            me.id
+            ? " me"
+            : ""
+        );
+
+      row.textContent =
+        (
+          p.name ||
+          "Player"
+        ) +
+        (
+          p.alive ===
+          false
+            ? " ☠"
+            : ""
+        );
+
+      box.appendChild(
+        row
       );
-
-    row.className =
-      "playerRow" +
-      (
-        me &&
-        p.id === me.id
-          ? " me"
-          : ""
-      );
-
-    row.textContent =
-      (
-        p.name ||
-        "Player"
-      ) +
-      (
-        p.alive === false
-          ? " ☠"
-          : ""
-      );
-
-    box.appendChild(row);
-  });
+    }
+  );
 }
 
-/* =========================================================
-   CHAT
-========================================================= */
+/* CHAT */
 
-function escapeHTML(text){
+function escapeHTML(
+  text
+){
 
-  return String(text)
+  return String(
+    text
+  )
     .replaceAll(
       "&",
       "&amp;"
@@ -1851,10 +2282,13 @@ function addChatMessage(
     ":</b> " +
     escapeHTML(message);
 
-  chat.appendChild(div);
+  chat.appendChild(
+    div
+  );
 
   while(
-    chat.children.length > 6
+    chat.children.length >
+    6
   ){
 
     chat.removeChild(
@@ -1862,13 +2296,18 @@ function addChatMessage(
     );
   }
 
-  setTimeout(() => {
+  setTimeout(
+    () => {
 
-    if(div.parentNode){
-      div.remove();
-    }
+      if(
+        div.parentNode
+      ){
+        div.remove();
+      }
 
-  },10000);
+    },
+    10000
+  );
 }
 
 function sendChat(){
@@ -1884,11 +2323,14 @@ function sendChat(){
   if(!message) return;
 
   send({
-    type:"chat",
+    type:
+      "chat",
+
     message
   });
 
-  input.value = "";
+  input.value =
+    "";
 }
 
 document
@@ -1909,7 +2351,8 @@ document
     e => {
 
       if(
-        e.key === "Enter"
+        e.key ===
+        "Enter"
       ){
 
         sendChat();
@@ -1917,9 +2360,7 @@ document
     }
   );
 
-/* =========================================================
-   PC INPUT
-========================================================= */
+/* PC INPUT */
 
 const keys = {};
 
@@ -1951,7 +2392,8 @@ window.addEventListener(
     }
 
     if(
-      e.key === "Enter"
+      e.key ===
+      "Enter"
     ){
 
       document
@@ -1962,8 +2404,14 @@ window.addEventListener(
     }
 
     if(
-      ["1","2","3","4"]
-        .includes(e.key)
+      [
+        "1",
+        "2",
+        "3",
+        "4"
+      ].includes(
+        e.key
+      )
     ){
 
       selectSlot(
@@ -2015,9 +2463,7 @@ window.addEventListener(
   }
 );
 
-/* =========================================================
-   MOUSE
-========================================================= */
+/* MOUSE */
 
 let mouseX =
   W / 2;
@@ -2036,14 +2482,18 @@ canvas.addEventListener(
       canvas.getBoundingClientRect();
 
     mouseX =
-      (e.clientX -
-        rect.left) *
+      (
+        e.clientX -
+        rect.left
+      ) *
       W /
       rect.width;
 
     mouseY =
-      (e.clientY -
-        rect.top) *
+      (
+        e.clientY -
+        rect.top
+      ) *
       H /
       rect.height;
   }
@@ -2057,7 +2507,8 @@ canvas.addEventListener(
       e.button === 0
     ){
 
-      mouseDown = true;
+      mouseDown =
+        true;
     }
   }
 );
@@ -2070,14 +2521,13 @@ window.addEventListener(
       e.button === 0
     ){
 
-      mouseDown = false;
+      mouseDown =
+        false;
     }
   }
 );
 
-/* =========================================================
-   MOVEMENT
-========================================================= */
+/* MOVEMENT */
 
 const mobileMove = {
   x:0,
@@ -2126,8 +2576,11 @@ function getMovementDirection(){
     x += 1;
   }
 
-  x += mobileMove.x;
-  y += mobileMove.y;
+  x +=
+    mobileMove.x;
+
+  y +=
+    mobileMove.y;
 
   const length =
     Math.hypot(
@@ -2135,10 +2588,15 @@ function getMovementDirection(){
       y
     );
 
-  if(length > 1){
+  if(
+    length > 1
+  ){
 
-    x /= length;
-    y /= length;
+    x /=
+      length;
+
+    y /=
+      length;
   }
 
   return {
@@ -2147,9 +2605,7 @@ function getMovementDirection(){
   };
 }
 
-/* =========================================================
-   ACTIONS
-========================================================= */
+/* ACTIONS */
 
 function shoot(){
 
@@ -2162,20 +2618,20 @@ function shoot(){
     return;
   }
 
-  /*
-   * Si tenemos el pico equipado,
-   * el click no dispara.
-   */
   if(
-    selectedSlot === 4
+    selectedSlot ===
+    4
   ){
 
     return;
   }
 
   send({
-    type:"shoot",
-    angle:me.angle
+    type:
+      "shoot",
+
+    angle:
+      me.angle
   });
 }
 
@@ -2184,7 +2640,8 @@ function reloadWeapon(){
   if(!me) return;
 
   send({
-    type:"reload"
+    type:
+      "reload"
   });
 }
 
@@ -2200,10 +2657,17 @@ function build(){
   }
 
   send({
-    type:"build",
-    x:me.x,
-    y:me.y,
-    angle:me.angle
+    type:
+      "build",
+
+    x:
+      me.x,
+
+    y:
+      me.y,
+
+    angle:
+      me.angle
   });
 }
 
@@ -2222,7 +2686,8 @@ function pickaxe(){
     Date.now();
 
   if(
-    now - lastPickaxeSwing <
+    now -
+      lastPickaxeSwing <
     PICKAXE_DURATION
   ){
 
@@ -2237,8 +2702,11 @@ function pickaxe(){
     PICKAXE_DURATION;
 
   send({
-    type:"pickaxe",
-    angle:me.angle
+    type:
+      "pickaxe",
+
+    angle:
+      me.angle
   });
 }
 
@@ -2247,11 +2715,14 @@ function pickup(){
   if(!me) return;
 
   send({
-    type:"pickup"
+    type:
+      "pickup"
   });
 }
 
-function selectSlot(slot){
+function selectSlot(
+  slot
+){
 
   selectedSlot =
     slot;
@@ -2266,41 +2737,47 @@ function selectSlot(slot){
     .querySelectorAll(
       ".slot"
     )
-    .forEach(el => {
+    .forEach(
+      el => {
 
-      el.classList.toggle(
-        "active",
-        Number(
-          el.dataset.slot
-        ) === slot
-      );
-    });
+        el.classList.toggle(
+          "active",
+          Number(
+            el.dataset.slot
+          ) ===
+            slot
+        );
+      }
+    );
 
-  /*
-   * Sincronizar qué tenemos equipado.
-   */
   send({
-    type:"selectSlot",
+    type:
+      "selectSlot",
+
     slot
   });
 }
 
 document
-  .querySelectorAll(".slot")
-  .forEach(slot => {
+  .querySelectorAll(
+    ".slot"
+  )
+  .forEach(
+    slot => {
 
-    slot.addEventListener(
-      "click",
-      () => {
+      slot.addEventListener(
+        "click",
+        () => {
 
-        selectSlot(
-          Number(
-            slot.dataset.slot
-          )
-        );
-      }
-    );
-  });
+          selectSlot(
+            Number(
+              slot.dataset.slot
+            )
+          );
+        }
+      );
+    }
+  );
 
 document
   .getElementById(
@@ -2311,11 +2788,11 @@ document
     pickup
   );
 
-/* =========================================================
-   EMOTES
-========================================================= */
+/* EMOTES */
 
-function doEmote(emote){
+function doEmote(
+  emote
+){
 
   if(
     !me ||
@@ -2334,7 +2811,9 @@ function doEmote(emote){
     EMOTE_DURATION;
 
   send({
-    type:"emote",
+    type:
+      "emote",
+
     emote
   });
 }
@@ -2343,22 +2822,22 @@ document
   .querySelectorAll(
     ".emote"
   )
-  .forEach(btn => {
+  .forEach(
+    btn => {
 
-    btn.addEventListener(
-      "click",
-      () => {
+      btn.addEventListener(
+        "click",
+        () => {
 
-        doEmote(
-          btn.dataset.emote
-        );
-      }
-    );
-  });
+          doEmote(
+            btn.dataset.emote
+          );
+        }
+      );
+    }
+  );
 
-/* =========================================================
-   MOBILE JOYSTICK
-========================================================= */
+/* MOBILE JOYSTICK */
 
 function setupJoystick(
   elementId,
@@ -2376,10 +2855,14 @@ function setupJoystick(
       stickId
     );
 
-  let active = false;
-  let pointerId = null;
+  let active =
+    false;
 
-  const radius = 35;
+  let pointerId =
+    null;
+
+  const radius =
+    35;
 
   function update(e){
 
@@ -2427,16 +2910,21 @@ function setupJoystick(
       `translate(${dx}px,${dy}px)`;
 
     output.x =
-      dx / radius;
+      dx /
+      radius;
 
     output.y =
-      dy / radius;
+      dy /
+      radius;
   }
 
   function reset(){
 
-    active = false;
-    pointerId = null;
+    active =
+      false;
+
+    pointerId =
+      null;
 
     output.x = 0;
     output.y = 0;
@@ -2449,7 +2937,8 @@ function setupJoystick(
     "pointerdown",
     e => {
 
-      active = true;
+      active =
+        true;
 
       pointerId =
         e.pointerId;
@@ -2509,9 +2998,7 @@ setupJoystick(
   mobileAim
 );
 
-/* =========================================================
-   MOBILE BUTTONS
-========================================================= */
+/* MOBILE BUTTONS */
 
 const fireButton =
   document.getElementById(
@@ -2525,14 +3012,16 @@ fireButton.addEventListener(
     e.preventDefault();
 
     if(
-      selectedSlot === 4
+      selectedSlot ===
+      4
     ){
 
       pickaxe();
 
     }else{
 
-      mouseDown = true;
+      mouseDown =
+        true;
     }
   }
 );
@@ -2543,7 +3032,8 @@ fireButton.addEventListener(
 
     e.preventDefault();
 
-    mouseDown = false;
+    mouseDown =
+      false;
   }
 );
 
@@ -2551,7 +3041,8 @@ fireButton.addEventListener(
   "pointercancel",
   () => {
 
-    mouseDown = false;
+    mouseDown =
+      false;
   }
 );
 
@@ -2591,17 +3082,19 @@ document
     pickup
   );
 
-/* =========================================================
-   AIM
-========================================================= */
+/* AIM */
 
 function updateAim(){
 
   if(!me) return;
 
   if(
-    Math.abs(mobileAim.x) > .15 ||
-    Math.abs(mobileAim.y) > .15
+    Math.abs(
+      mobileAim.x
+    ) > .15 ||
+    Math.abs(
+      mobileAim.y
+    ) > .15
   ){
 
     me.angle =
@@ -2628,11 +3121,11 @@ function updateAim(){
     );
 }
 
-/* =========================================================
-   GAME LOOP
-========================================================= */
+/* GAME LOOP */
 
-function loop(now){
+function loop(
+  now
+){
 
   const delta =
     Math.min(
@@ -2656,8 +3149,12 @@ function loop(now){
       getMovementDirection();
 
     const moving =
-      Math.abs(dir.x) > .01 ||
-      Math.abs(dir.y) > .01;
+      Math.abs(
+        dir.x
+      ) > .01 ||
+      Math.abs(
+        dir.y
+      ) > .01;
 
     if(moving){
 
@@ -2675,7 +3172,8 @@ function loop(now){
         Math.max(
           30,
           Math.min(
-            WORLD - 30,
+            WORLD -
+              30,
             me.x
           )
         );
@@ -2684,7 +3182,8 @@ function loop(now){
         Math.max(
           30,
           Math.min(
-            WORLD - 30,
+            WORLD -
+              30,
             me.y
           )
         );
@@ -2712,7 +3211,9 @@ function loop(now){
           dy
         );
 
-      if(error > 120){
+      if(
+        error > 120
+      ){
 
         me.x =
           serverPosition.x;
@@ -2720,7 +3221,9 @@ function loop(now){
         me.y =
           serverPosition.y;
 
-      }else if(error > 2){
+      }else if(
+        error > 2
+      ){
 
         const correction =
           Math.min(
@@ -2742,7 +3245,7 @@ function loop(now){
 
     if(
       now -
-      lastPositionSend >=
+        lastPositionSend >=
       POSITION_SEND_RATE
     ){
 
@@ -2750,10 +3253,23 @@ function loop(now){
         now;
 
       send({
-        type:"update",
-        x:Math.round(me.x),
-        y:Math.round(me.y),
-        angle:me.angle
+        type:
+          "update",
+
+        x:
+          Math.round(
+            me.x
+          ),
+
+        y:
+          Math.round(
+            me.y
+          ),
+
+        angle:
+          me.angle,
+
+        moving
       });
     }
 
@@ -2762,14 +3278,10 @@ function loop(now){
       delta
     );
 
-    /*
-     * El pico se usa con F.
-     * Con click se dispara solamente
-     * si no tenemos el pico equipado.
-     */
     if(
       mouseDown &&
-      selectedSlot !== 4
+      selectedSlot !==
+        4
     ){
 
       shoot();
@@ -2783,9 +3295,7 @@ function loop(now){
   );
 }
 
-/* =========================================================
-   ANIMATION
-========================================================= */
+/* ANIMATION */
 
 function updatePlayerAnimation(
   moving,
@@ -2799,9 +3309,7 @@ function updatePlayerAnimation(
   }
 }
 
-/* =========================================================
-   DRAW
-========================================================= */
+/* DRAW */
 
 function draw(){
 
@@ -2828,7 +3336,8 @@ function draw(){
       me.x -
         W / 2,
       0,
-      WORLD - W
+      WORLD -
+        W
     );
 
   const cameraY =
@@ -2836,7 +3345,8 @@ function draw(){
       me.y -
         H / 2,
       0,
-      WORLD - H
+      WORLD -
+        H
     );
 
   ctx.save();
@@ -2854,43 +3364,55 @@ function draw(){
 
   drawBullets();
 
-  players.forEach(p => {
+  players.forEach(
+    p => {
 
-    if(
-      !p ||
-      p.alive === false
-    ){
+      if(
+        !p ||
+        p.alive ===
+          false
+      ){
 
-      return;
+        return;
+      }
+
+      let x =
+        p.x;
+
+      let y =
+        p.y;
+
+      if(
+        me &&
+        p.id ===
+          me.id
+      ){
+
+        x =
+          me.x;
+
+        y =
+          me.y;
+      }
+
+      drawPlayer(
+        {
+          ...p,
+          x,
+          y
+        },
+        p.id ===
+          me.id
+      );
     }
-
-    let x = p.x;
-    let y = p.y;
-
-    if(
-      me &&
-      p.id === me.id
-    ){
-
-      x = me.x;
-      y = me.y;
-    }
-
-    drawPlayer(
-      {
-        ...p,
-        x,
-        y
-      },
-      p.id === me.id
-    );
-  });
+  );
 
   if(
     me &&
     !players.some(
       p =>
-        p.id === me.id
+        p.id ===
+        me.id
     )
   ){
 
@@ -2903,9 +3425,7 @@ function draw(){
   ctx.restore();
 }
 
-/* =========================================================
-   WORLD
-========================================================= */
+/* WORLD */
 
 function drawWorld(){
 
@@ -2919,12 +3439,14 @@ function drawWorld(){
     WORLD
   );
 
-  const grid = 80;
+  const grid =
+    80;
 
   ctx.strokeStyle =
     "rgba(20,50,20,.12)";
 
-  ctx.lineWidth = 2;
+  ctx.lineWidth =
+    2;
 
   for(
     let x = 0;
@@ -3001,197 +3523,196 @@ function drawWorld(){
 
 function drawLoot(){
 
-  loot.forEach(item => {
+  loot.forEach(
+    item => {
 
-    if(!item) return;
+      if(!item) return;
 
-    const x =
-      item.x;
+      const x =
+        item.x;
 
-    const y =
-      item.y;
+      const y =
+        item.y;
 
-    ctx.save();
+      ctx.save();
 
-    ctx.translate(
-      x,
-      y
-    );
+      ctx.translate(
+        x,
+        y
+      );
 
-    ctx.fillStyle =
-      "#f4c542";
+      ctx.fillStyle =
+        "#f4c542";
 
-    ctx.fillRect(
-      -8,
-      -8,
-      16,
-      16
-    );
+      ctx.fillRect(
+        -8,
+        -8,
+        16,
+        16
+      );
 
-    ctx.fillStyle =
-      "#fff";
+      ctx.fillStyle =
+        "#fff";
 
-    ctx.fillRect(
-      -3,
-      -12,
-      6,
-      6
-    );
+      ctx.fillRect(
+        -3,
+        -12,
+        6,
+        6
+      );
 
-    ctx.restore();
-  });
+      ctx.restore();
+    }
+  );
 }
 
-/* =========================================================
-   WALLS / CONSTRUCTIONS
-========================================================= */
+/* WALLS */
 
 function drawWalls(){
 
-  walls.forEach(w => {
+  walls.forEach(
+    w => {
 
-    if(!w) return;
+      if(!w) return;
 
-    const width =
-      Number(w.width) || 60;
+      const width =
+        Number(
+          w.width
+        ) || 60;
 
-    const height =
-      Number(w.height) || 60;
+      const height =
+        Number(
+          w.height
+        ) || 60;
 
-    /*
-     * Sombra
-     */
-    ctx.fillStyle =
-      "rgba(0,0,0,.25)";
+      ctx.fillStyle =
+        "rgba(0,0,0,.25)";
 
-    ctx.fillRect(
-      w.x + 4,
-      w.y + 5,
-      width,
-      height
-    );
+      ctx.fillRect(
+        w.x + 4,
+        w.y + 5,
+        width,
+        height
+      );
 
-    /*
-     * Madera
-     */
-    ctx.fillStyle =
-      "#9b643d";
+      ctx.fillStyle =
+        "#9b643d";
 
-    ctx.fillRect(
-      w.x,
-      w.y,
-      width,
-      height
-    );
+      ctx.fillRect(
+        w.x,
+        w.y,
+        width,
+        height
+      );
 
-    /*
-     * Borde
-     */
-    ctx.strokeStyle =
-      "#603d28";
+      ctx.strokeStyle =
+        "#603d28";
 
-    ctx.lineWidth = 4;
+      ctx.lineWidth =
+        4;
 
-    ctx.strokeRect(
-      w.x,
-      w.y,
-      width,
-      height
-    );
+      ctx.strokeRect(
+        w.x,
+        w.y,
+        width,
+        height
+      );
 
-    /*
-     * Detalles de madera
-     */
-    ctx.strokeStyle =
-      "rgba(255,210,150,.25)";
+      ctx.strokeStyle =
+        "rgba(255,210,150,.25)";
 
-    ctx.lineWidth = 2;
+      ctx.lineWidth =
+        2;
 
-    ctx.beginPath();
+      ctx.beginPath();
 
-    ctx.moveTo(
-      w.x + 8,
-      w.y + 8
-    );
+      ctx.moveTo(
+        w.x + 8,
+        w.y + 8
+      );
 
-    ctx.lineTo(
-      w.x + width - 8,
-      w.y + height - 8
-    );
+      ctx.lineTo(
+        w.x +
+          width -
+          8,
+        w.y +
+          height -
+          8
+      );
 
-    ctx.moveTo(
-      w.x + width - 8,
-      w.y + 8
-    );
+      ctx.moveTo(
+        w.x +
+          width -
+          8,
+        w.y + 8
+      );
 
-    ctx.lineTo(
-      w.x + 8,
-      w.y + height - 8
-    );
+      ctx.lineTo(
+        w.x + 8,
+        w.y +
+          height -
+          8
+      );
 
-    ctx.stroke();
-  });
+      ctx.stroke();
+    }
+  );
 }
 
-/* =========================================================
-   BULLETS
-========================================================= */
+/* BULLETS */
 
 function drawBullets(){
 
-  bullets.forEach(b => {
+  bullets.forEach(
+    b => {
 
-    if(!b) return;
+      if(!b) return;
 
-    /*
-     * Aura
-     */
-    ctx.fillStyle =
-      "rgba(255,210,40,.18)";
+      ctx.fillStyle =
+        "rgba(255,210,40,.18)";
 
-    ctx.beginPath();
+      ctx.beginPath();
 
-    ctx.arc(
-      b.x,
-      b.y,
-      7,
-      0,
-      Math.PI * 2
-    );
+      ctx.arc(
+        b.x,
+        b.y,
+        7,
+        0,
+        Math.PI * 2
+      );
 
-    ctx.fill();
+      ctx.fill();
 
-    /*
-     * Bala
-     */
-    ctx.fillStyle =
-      "#ffe44b";
+      ctx.fillStyle =
+        "#ffe44b";
 
-    ctx.beginPath();
+      ctx.beginPath();
 
-    ctx.arc(
-      b.x,
-      b.y,
-      4,
-      0,
-      Math.PI * 2
-    );
+      ctx.arc(
+        b.x,
+        b.y,
+        4,
+        0,
+        Math.PI * 2
+      );
 
-    ctx.fill();
-  });
+      ctx.fill();
+    }
+  );
 }
 
-/* =========================================================
-   PLAYER
-========================================================= */
+/* PLAYER */
 
 function drawPlayer(
   p,
   isMe
 ){
 
-  const x = p.x;
-  const y = p.y;
+  const x =
+    p.x;
+
+  const y =
+    p.y;
 
   const moving =
     p.moving ||
@@ -3228,16 +3749,10 @@ function drawPlayer(
     Math.round(y)
   );
 
-  /*
-   * EMOTE SOBRE LA CABEZA
-   */
   drawEmoteBubble(
     p
   );
 
-  /*
-   * sombra
-   */
   ctx.fillStyle =
     "rgba(0,0,0,.25)";
 
@@ -3248,9 +3763,6 @@ function drawPlayer(
     7
   );
 
-  /*
-   * cuerpo
-   */
   ctx.fillStyle =
     isMe
       ? "#2e70d1"
@@ -3263,9 +3775,6 @@ function drawPlayer(
     24
   );
 
-  /*
-   * chaqueta pixel
-   */
   ctx.fillStyle =
     isMe
       ? "#3d8cff"
@@ -3285,9 +3794,6 @@ function drawPlayer(
     15
   );
 
-  /*
-   * piernas
-   */
   ctx.fillStyle =
     "#26334a";
 
@@ -3305,9 +3811,6 @@ function drawPlayer(
     13
   );
 
-  /*
-   * botas
-   */
   ctx.fillStyle =
     "#151a22";
 
@@ -3325,9 +3828,6 @@ function drawPlayer(
     5
   );
 
-  /*
-   * cuello
-   */
   ctx.fillStyle =
     "#e3a678";
 
@@ -3338,9 +3838,6 @@ function drawPlayer(
     8
   );
 
-  /*
-   * cabeza
-   */
   ctx.fillStyle =
     "#e3a678";
 
@@ -3351,9 +3848,6 @@ function drawPlayer(
     20
   );
 
-  /*
-   * pelo
-   */
   ctx.fillStyle =
     "#3a241a";
 
@@ -3378,9 +3872,6 @@ function drawPlayer(
     7
   );
 
-  /*
-   * ojos
-   */
   ctx.fillStyle =
     "#161616";
 
@@ -3398,19 +3889,20 @@ function drawPlayer(
     4
   );
 
-  /*
-   * ARMA / PICO
-   */
   const isHoldingPickaxe =
     (
       isMe &&
-      selectedSlot === 4
+      selectedSlot ===
+        4
     ) ||
     (
-      p.selectedSlot === 4
+      p.selectedSlot ===
+        4
     );
 
-  if(isHoldingPickaxe){
+  if(
+    isHoldingPickaxe
+  ){
 
     drawPickaxe(
       p.angle || 0,
@@ -3427,9 +3919,6 @@ function drawPlayer(
     );
   }
 
-  /*
-   * nombre
-   */
   ctx.font =
     "bold 12px Arial";
 
@@ -3459,9 +3948,6 @@ function drawPlayer(
     -39
   );
 
-  /*
-   * vida
-   */
   const hp =
     Math.max(
       0,
@@ -3501,20 +3987,16 @@ function drawPlayer(
   ctx.restore();
 }
 
-/* =========================================================
-   EMOTE BUBBLE
-========================================================= */
+/* EMOTE */
 
-function drawEmoteBubble(p){
+function drawEmoteBubble(
+  p
+){
 
   if(!p.emote){
     return;
   }
 
-  /*
-   * Si tenemos timestamp y ya pasó,
-   * no mostramos nada.
-   */
   if(
     p.emoteUntil &&
     Date.now() >
@@ -3545,10 +4027,12 @@ function drawEmoteBubble(p){
       38,
       ctx.measureText(
         text
-      ).width + 20
+      ).width +
+        20
     );
 
-  const height = 34;
+  const height =
+    34;
 
   const bx =
     -width / 2;
@@ -3556,27 +4040,36 @@ function drawEmoteBubble(p){
   const by =
     -91;
 
-  /*
-   * Globo
-   */
   ctx.fillStyle =
     "rgba(255,255,255,.96)";
 
   ctx.beginPath();
 
-  ctx.roundRect(
-    bx,
-    by,
-    width,
-    height,
-    9
-  );
+  if(
+    typeof ctx.roundRect ===
+    "function"
+  ){
+
+    ctx.roundRect(
+      bx,
+      by,
+      width,
+      height,
+      9
+    );
+
+  }else{
+
+    ctx.rect(
+      bx,
+      by,
+      width,
+      height
+    );
+  }
 
   ctx.fill();
 
-  /*
-   * Cola
-   */
   ctx.beginPath();
 
   ctx.moveTo(
@@ -3586,7 +4079,9 @@ function drawEmoteBubble(p){
 
   ctx.lineTo(
     0,
-    by + height + 9
+    by +
+      height +
+      9
   );
 
   ctx.lineTo(
@@ -3604,15 +4099,14 @@ function drawEmoteBubble(p){
   ctx.fillText(
     text,
     0,
-    by + height / 2
+    by +
+      height / 2
   );
 
   ctx.restore();
 }
 
-/* =========================================================
-   PICKAXE
-========================================================= */
+/* PICKAXE */
 
 function drawPickaxe(
   angle,
@@ -3632,7 +4126,8 @@ function drawPickaxe(
 
   if(
     swingUntil &&
-    now < swingUntil
+    now <
+      swingUntil
   ){
 
     const elapsed =
@@ -3648,7 +4143,7 @@ function drawPickaxe(
         Math.max(
           0,
           elapsed /
-          PICKAXE_DURATION
+            PICKAXE_DURATION
         )
       );
 
@@ -3659,21 +4154,17 @@ function drawPickaxe(
       );
   }
 
-  /*
-   * Movimiento del brazo/pico
-   */
   ctx.rotate(
     -0.55 +
-    swing * 1.9
+    swing *
+      1.9
   );
 
-  /*
-   * Mango
-   */
   ctx.strokeStyle =
     "#74451f";
 
-  ctx.lineWidth = 5;
+  ctx.lineWidth =
+    5;
 
   ctx.lineCap =
     "round";
@@ -3692,13 +4183,11 @@ function drawPickaxe(
 
   ctx.stroke();
 
-  /*
-   * Cabeza
-   */
   ctx.strokeStyle =
     "#c9d0d8";
 
-  ctx.lineWidth = 6;
+  ctx.lineWidth =
+    6;
 
   ctx.beginPath();
 
@@ -3714,13 +4203,11 @@ function drawPickaxe(
 
   ctx.stroke();
 
-  /*
-   * Brillo
-   */
   ctx.strokeStyle =
     "#eef3f8";
 
-  ctx.lineWidth = 2;
+  ctx.lineWidth =
+    2;
 
   ctx.beginPath();
 
@@ -3739,9 +4226,7 @@ function drawPickaxe(
   ctx.restore();
 }
 
-/* =========================================================
-   WEAPON
-========================================================= */
+/* WEAPON */
 
 function drawWeapon(
   angle,
@@ -3810,9 +4295,7 @@ function drawWeapon(
   ctx.restore();
 }
 
-/* =========================================================
-   BACKGROUND
-========================================================= */
+/* BACKGROUND */
 
 function drawBackground(){
 
@@ -3847,9 +4330,7 @@ function drawCenterMessage(
   );
 }
 
-/* =========================================================
-   UTIL
-========================================================= */
+/* UTIL */
 
 function clamp(
   value,
@@ -3866,15 +4347,14 @@ function clamp(
   );
 }
 
-/* =========================================================
-   END GAME
-========================================================= */
+/* END GAME */
 
 function endGame(
   winner
 ){
 
-  gameEnded = true;
+  gameEnded =
+    true;
 
   const overlay =
     document.getElementById(
@@ -3921,9 +4401,7 @@ document
     }
   );
 
-/* =========================================================
-   PING
-========================================================= */
+/* PING */
 
 setInterval(
   () => {
@@ -3931,7 +4409,9 @@ setInterval(
     if(connected){
 
       send({
-        type:"ping",
+        type:
+          "ping",
+
         clientTime:
           Date.now()
       });
@@ -3941,16 +4421,15 @@ setInterval(
   2000
 );
 
-/* =========================================================
-   START
-========================================================= */
+/* START */
 
 connect();
 
 requestAnimationFrame(
   loop
 );
-
 </script>
+
 </body>
 </html>
+```
