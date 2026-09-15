@@ -1,11 +1,12 @@
 {
   "name": "pixel-royale",
   "version": "2.0.0",
+  "description": "Pixel Royale multiplayer game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.3"
   }
 }
