@@ -1,2453 +1,1250 @@
-"use strict";
-
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const WebSocket = require("ws");
 
-/* =========================================================
-   CONFIG
-========================================================= */
-
-const PORT =
-  process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 const WORLD_SIZE = 2400;
-
 const MAX_POSITION_DELTA = 30;
-
 const STATE_INTERVAL = 50;
 
-/* =========================================================
-   HTTP SERVER
-========================================================= */
+const server = http.createServer((req, res) => {
+  let filePath = req.url === "/" || req.url === "/index.html"
+    ? path.join(__dirname, "client.html")
+    : path.join(__dirname, req.url);
 
-const server =
-  http.createServer((req, res) => {
+  if (!fs.existsSync(filePath)) {
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
 
-    let filePath;
+  const ext = path.extname(filePath);
+  const contentType =
+    ext === ".html" ? "text/html; charset=utf-8" :
+    ext === ".js" ? "application/javascript; charset=utf-8" :
+    ext === ".css" ? "text/css; charset=utf-8" :
+    "application/octet-stream";
 
-    if (
-      req.url === "/" ||
-      req.url === "/index.html"
-    ) {
-
-      filePath =
-        path.join(
-          __dirname,
-          "client.html"
-        );
-
-    } else {
-
-      res.writeHead(404);
-      res.end("Not found");
-      return;
-    }
-
-    fs.readFile(
-      filePath,
-      (err, data) => {
-
-        if (err) {
-
-          res.writeHead(500);
-          res.end(
-            "Error loading client.html"
-          );
-
-          return;
-        }
-
-        res.writeHead(
-          200,
-          {
-            "Content-Type":
-              "text/html; charset=utf-8"
-          }
-        );
-
-        res.end(data);
-      }
-    );
+  res.writeHead(200, {
+    "Content-Type": contentType
   });
 
-/* =========================================================
-   WEBSOCKET
-========================================================= */
+  fs.createReadStream(filePath).pipe(res);
+});
 
-const wss =
-  new WebSocket.Server({
-    server
-  });
+const wss = new WebSocket.Server({ server });
 
-/* =========================================================
-   DATA
-========================================================= */
+const players = new Map();
+const parties = new Map();
 
-const players =
-  new Map();
-
-const parties =
-  new Map();
+const bullets = [];
+const loot = [];
+const walls = [];
 
 let nextPlayerId = 1;
 let nextBulletId = 1;
 let nextWallId = 1;
 
-/*
- * Eventos temporales.
- *
- * Aquí guardamos impactos de bala para que el cliente
- * pueda recibirlos sin convertirlos en mensajes de chat.
- */
-const bulletHitEvents = [];
+const EMOTES = new Set([
+  "😀",
+  "😂",
+  "😎"
+]);
 
-/* =========================================================
-   UTIL
-========================================================= */
+function randomPartyCode() {
+  let code;
 
-function randomId(prefix) {
-
-  return (
-    prefix +
-    Math.random()
+  do {
+    code = Math.random()
       .toString(36)
-      .slice(2, 9)
-  );
+      .substring(2, 8)
+      .toUpperCase();
+  } while (parties.has(code));
+
+  return code;
 }
 
-function randomSpawn() {
-
-  return {
-    x:
-      100 +
-      Math.random() *
-      (WORLD_SIZE - 200),
-
-    y:
-      100 +
-      Math.random() *
-      (WORLD_SIZE - 200)
-  };
-}
-
-function clamp(value, min, max) {
-
-  return Math.max(
-    min,
-    Math.min(
-      max,
-      value
-    )
-  );
-}
-
-function distance(
-  x1,
-  y1,
-  x2,
-  y2
-) {
-
-  return Math.hypot(
-    x2 - x1,
-    y2 - y1
-  );
-}
-
-/*
- * Comprueba si un punto está dentro de un rectángulo.
- */
-function pointInsideRect(
-  x,
-  y,
-  rect
-) {
-
-  return (
-    x >= rect.x &&
-    x <= rect.x + rect.width &&
-    y >= rect.y &&
-    y <= rect.y + rect.height
-  );
-}
-
-/*
- * Comprueba si un segmento entre dos puntos toca
- * un rectángulo.
- *
- * Se usa para las balas para evitar que atraviesen
- * una pared cuando van muy rápido.
- */
-function segmentIntersectsRect(
-  x1,
-  y1,
-  x2,
-  y2,
-  rect
-) {
-
-  if (
-    pointInsideRect(
-      x1,
-      y1,
-      rect
-    )
-  ) {
-    return true;
+function send(ws, data) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
   }
+}
 
-  if (
-    pointInsideRect(
-      x2,
-      y2,
-      rect
-    )
-  ) {
-    return true;
-  }
+function broadcastParty(partyCode, data) {
+  if (!partyCode) return;
 
-  const minX = rect.x;
-  const maxX = rect.x + rect.width;
-
-  const minY = rect.y;
-  const maxY = rect.y + rect.height;
-
-  /*
-   * Segmento contra cada uno de los cuatro lados.
-   */
-
-  function linesIntersect(
-    ax,
-    ay,
-    bx,
-    by,
-    cx,
-    cy,
-    dx,
-    dy
-  ) {
-
-    const denominator =
-      (bx - ax) * (dy - cy) -
-      (by - ay) * (dx - cx);
-
+  for (const player of players.values()) {
     if (
-      Math.abs(denominator) <
-      0.000001
+      player.partyCode === partyCode &&
+      player.ws.readyState === WebSocket.OPEN
     ) {
-      return false;
+      player.ws.send(JSON.stringify(data));
     }
-
-    const ua =
-      (
-        (dx - cx) * (ay - cy) -
-        (dy - cy) * (ax - cx)
-      ) / denominator;
-
-    const ub =
-      (
-        (bx - ax) * (ay - cy) -
-        (by - ay) * (ax - cx)
-      ) / denominator;
-
-    return (
-      ua >= 0 &&
-      ua <= 1 &&
-      ub >= 0 &&
-      ub <= 1
-    );
   }
-
-  /*
-   * Arriba
-   */
-  if (
-    linesIntersect(
-      x1,
-      y1,
-      x2,
-      y2,
-      minX,
-      minY,
-      maxX,
-      minY
-    )
-  ) {
-    return true;
-  }
-
-  /*
-   * Abajo
-   */
-  if (
-    linesIntersect(
-      x1,
-      y1,
-      x2,
-      y2,
-      minX,
-      maxY,
-      maxX,
-      maxY
-    )
-  ) {
-    return true;
-  }
-
-  /*
-   * Izquierda
-   */
-  if (
-    linesIntersect(
-      x1,
-      y1,
-      x2,
-      y2,
-      minX,
-      minY,
-      minX,
-      maxY
-    )
-  ) {
-    return true;
-  }
-
-  /*
-   * Derecha
-   */
-  if (
-    linesIntersect(
-      x1,
-      y1,
-      x2,
-      y2,
-      maxX,
-      minY,
-      maxX,
-      maxY
-    )
-  ) {
-    return true;
-  }
-
-  return false;
 }
-
-/* =========================================================
-   CREATE PLAYER
-========================================================= */
 
 function createPlayer(ws, name) {
-
-  const spawn =
-    randomSpawn();
-
   const player = {
-
-    id:
-      "p" +
-      nextPlayerId++,
-
+    id: nextPlayerId++,
     ws,
 
-    name:
-      String(name || "Player")
-        .slice(0, 16),
+    name: String(name || "Player").substring(0, 16),
 
-    x:
-      spawn.x,
-
-    y:
-      spawn.y,
+    x: WORLD_SIZE / 2,
+    y: WORLD_SIZE / 2,
 
     angle: 0,
 
     hp: 100,
-
-    shield: 0,
+    shield: 50,
 
     weapon: "rifle",
 
     ammo: 30,
-
     maxAmmo: 30,
 
     kills: 0,
 
     alive: true,
-
     moving: false,
 
     team: null,
 
     partyCode: null,
-
     ready: false,
-
     isHost: false,
 
-    /*
-     * Último emote realizado.
-     */
+    // Inventario / animaciones visuales
+    selectedSlot: 1,
     emote: null,
-
-    emoteUntil: 0
+    emoteUntil: 0,
+    pickaxeUntil: 0
   };
 
-  players.set(
-    ws,
-    player
-  );
+  players.set(player.id, player);
 
   return player;
 }
 
-/* =========================================================
-   SEND
-========================================================= */
+function removePlayerFromParty(player) {
+  if (!player.partyCode) return;
 
-function send(ws, data) {
+  const party = parties.get(player.partyCode);
 
-  if (
-    ws &&
-    ws.readyState ===
-    WebSocket.OPEN
-  ) {
-
-    try {
-
-      ws.send(
-        JSON.stringify(data)
-      );
-
-    } catch (e) {}
+  if (!party) {
+    player.partyCode = null;
+    player.ready = false;
+    player.isHost = false;
+    return;
   }
-}
 
-/* =========================================================
-   PARTY CODE
-========================================================= */
+  party.players.delete(player.id);
 
-function generatePartyCode() {
+  if (party.hostId === player.id) {
+    const nextHost = [...party.players][0] || null;
 
-  let code;
+    party.hostId = nextHost;
 
-  do {
+    if (nextHost) {
+      const hostPlayer = players.get(nextHost);
 
-    code =
-      Math.random()
-        .toString(36)
-        .substring(2, 8)
-        .toUpperCase();
-
-  } while (
-    parties.has(code)
-  );
-
-  return code;
-}
-
-/* =========================================================
-   CREATE PARTY
-========================================================= */
-
-function createParty(
-  player,
-  teamMode
-) {
-
-  const code =
-    generatePartyCode();
-
-  const party = {
-
-    code,
-
-    hostId:
-      player.id,
-
-    teamMode:
-      teamMode || "solo",
-
-    started: false,
-
-    players:
-      new Set()
-  };
-
-  party.players.add(
-    player.id
-  );
-
-  parties.set(
-    code,
-    party
-  );
-
-  player.partyCode =
-    code;
-
-  player.isHost =
-    true;
-
-  player.ready =
-    true;
-
-  sendPartyState(
-    party
-  );
-
-  return party;
-}
-
-/* =========================================================
-   FIND PLAYER BY ID
-========================================================= */
-
-function getPlayerById(id) {
-
-  for (
-    const player of players.values()
-  ) {
-
-    if (
-      player.id === id
-    ) {
-
-      return player;
+      if (hostPlayer) {
+        hostPlayer.isHost = true;
+      }
     }
   }
 
-  return null;
+  if (party.players.size === 0) {
+    parties.delete(player.partyCode);
+  } else {
+    broadcastParty(player.partyCode, {
+      type: "party",
+      party: getPartyState(party)
+    });
+  }
+
+  player.partyCode = null;
+  player.ready = false;
+  player.isHost = false;
 }
 
-/* =========================================================
-   JOIN PARTY
-========================================================= */
+function getPartyState(party) {
+  return {
+    code: party.code,
+    hostId: party.hostId,
+    started: party.started,
+    teamMode: party.teamMode,
 
-function joinParty(
-  player,
-  code
-) {
+    players: [...party.players]
+      .map(id => players.get(id))
+      .filter(Boolean)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        ready: p.ready,
+        isHost: p.isHost,
+        team: p.team
+      }))
+  };
+}
 
-  const party =
-    parties.get(
-      String(code || "")
-        .toUpperCase()
-    );
+function createParty(player, teamMode) {
+  removePlayerFromParty(player);
+
+  const code = randomPartyCode();
+
+  const party = {
+    code,
+    hostId: player.id,
+    players: new Set([player.id]),
+    started: false,
+    teamMode: teamMode || "solo"
+  };
+
+  parties.set(code, party);
+
+  player.partyCode = code;
+  player.ready = false;
+  player.isHost = true;
+
+  send(player.ws, {
+    type: "party",
+    party: getPartyState(party)
+  });
+}
+
+function joinParty(player, code) {
+  code = String(code || "").trim().toUpperCase();
+
+  const party = parties.get(code);
 
   if (!party) {
-
     send(player.ws, {
       type: "error",
-      message:
-        "No existe esa partida."
+      message: "Partida no encontrada"
     });
-
     return;
   }
 
   if (party.started) {
-
     send(player.ws, {
       type: "error",
-      message:
-        "La partida ya empezó."
+      message: "La partida ya ha comenzado"
     });
-
     return;
   }
 
-  if (
-    party.players.size >= 16
-  ) {
+  removePlayerFromParty(player);
 
-    send(player.ws, {
-      type: "error",
-      message:
-        "La sala está llena."
-    });
+  party.players.add(player.id);
 
-    return;
-  }
+  player.partyCode = code;
+  player.ready = false;
+  player.isHost = false;
 
-  player.partyCode =
-    party.code;
+  send(player.ws, {
+    type: "party",
+    party: getPartyState(party)
+  });
 
-  player.ready =
-    false;
-
-  player.isHost =
-    false;
-
-  party.players.add(
-    player.id
-  );
-
-  sendPartyState(
-    party
-  );
+  broadcastParty(code, {
+    type: "party",
+    party: getPartyState(party)
+  });
 }
 
-/* =========================================================
-   PARTY STATE
-========================================================= */
+function setReady(player, ready) {
+  if (!player.partyCode) return;
 
-function sendPartyState(party) {
+  const party = parties.get(player.partyCode);
 
   if (!party) return;
 
-  const list = [];
+  player.ready = !!ready;
 
-  party.players.forEach(
-    playerId => {
-
-      const p =
-        getPlayerById(
-          playerId
-        );
-
-      if (p) {
-
-        list.push({
-          id: p.id,
-          name: p.name,
-          ready: p.ready
-        });
-      }
-    }
-  );
-
-  party.players.forEach(
-    playerId => {
-
-      const p =
-        getPlayerById(
-          playerId
-        );
-
-      if (!p) return;
-
-      send(p.ws, {
-        type: "party",
-        code: party.code,
-        hostId: party.hostId,
-        players: list
-      });
-    }
-  );
+  broadcastParty(player.partyCode, {
+    type: "party",
+    party: getPartyState(party)
+  });
 }
 
-/* =========================================================
-   REMOVE FROM PARTY
-========================================================= */
+function startParty(player) {
+  if (!player.partyCode) return;
 
-function removeFromParty(
-  player
-) {
+  const party = parties.get(player.partyCode);
 
-  if (!player.partyCode) {
+  if (!party) return;
+
+  if (party.hostId !== player.id) {
+    send(player.ws, {
+      type: "error",
+      message: "Solo el anfitrión puede iniciar"
+    });
     return;
   }
 
-  const party =
-    parties.get(
-      player.partyCode
-    );
+  party.started = true;
 
-  if (!party) {
+  const partyPlayers = [...party.players]
+    .map(id => players.get(id))
+    .filter(Boolean);
 
-    player.partyCode =
-      null;
-
-    return;
+  // Mantener la asignación de equipos sencilla.
+  if (party.teamMode === "teams") {
+    partyPlayers.forEach((p, index) => {
+      p.team = index % 2;
+    });
+  } else {
+    partyPlayers.forEach(p => {
+      p.team = null;
+    });
   }
 
-  party.players.delete(
-    player.id
-  );
+  // Reiniciar jugadores al comenzar.
+  partyPlayers.forEach((p, index) => {
+    p.x = 300 + (index % 4) * 100;
+    p.y = 300 + Math.floor(index / 4) * 100;
 
-  player.partyCode =
-    null;
+    p.hp = 100;
+    p.shield = 50;
 
-  player.ready =
-    false;
+    p.ammo = p.maxAmmo;
 
-  player.isHost =
-    false;
+    p.alive = true;
+    p.moving = false;
 
-  if (
-    party.players.size === 0
-  ) {
+    p.kills = 0;
 
-    parties.delete(
-      party.code
-    );
+    p.selectedSlot = 1;
 
-    return;
-  }
+    p.emote = null;
+    p.emoteUntil = 0;
+    p.pickaxeUntil = 0;
+  });
 
-  if (
-    party.hostId ===
-    player.id
-  ) {
-
-    const next =
-      party.players.values()
-        .next()
-        .value;
-
-    party.hostId =
-      next || null;
-
-    const newHost =
-      getPlayerById(
-        party.hostId
-      );
-
-    if (newHost) {
-
-      newHost.isHost =
-        true;
-
-      newHost.ready =
-        true;
+  // Limpiar objetos de esa partida.
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    if (bullets[i].partyCode === party.code) {
+      bullets.splice(i, 1);
     }
   }
 
-  sendPartyState(
-    party
-  );
-}
-
-/* =========================================================
-   READY
-========================================================= */
-
-function toggleReady(player) {
-
-  player.ready =
-    !player.ready;
-
-  const party =
-    parties.get(
-      player.partyCode
-    );
-
-  if (party) {
-
-    sendPartyState(
-      party
-    );
+  for (let i = walls.length - 1; i >= 0; i--) {
+    if (walls[i].partyCode === party.code) {
+      walls.splice(i, 1);
+    }
   }
+
+  sendPartyState(party);
 }
 
-/* =========================================================
-   CAN START
-========================================================= */
+function sendPartyState(party) {
+  broadcastParty(party.code, {
+    type: "party",
+    party: getPartyState(party)
+  });
 
-function canStart(party) {
+  broadcastParty(party.code, {
+    type: "gameStarted",
+    started: party.started
+  });
+}
 
-  if (!party) return false;
+function updatePlayer(player, data) {
+  if (!player.alive) return;
+
+  const newX = Number(data.x);
+  const newY = Number(data.y);
+  const angle = Number(data.angle);
+
+  if (!Number.isFinite(newX) || !Number.isFinite(newY)) {
+    return;
+  }
 
   if (
-    party.players.size < 1
+    Math.abs(newX - player.x) > MAX_POSITION_DELTA ||
+    Math.abs(newY - player.y) > MAX_POSITION_DELTA
   ) {
-    return false;
+    return;
   }
 
-  for (
-    const id of party.players
-  ) {
+  player.x = Math.max(0, Math.min(WORLD_SIZE, newX));
+  player.y = Math.max(0, Math.min(WORLD_SIZE, newY));
 
-    const p =
-      getPlayerById(id);
+  if (Number.isFinite(angle)) {
+    player.angle = angle;
+  }
+
+  player.moving = !!data.moving;
+}
+
+function shoot(player) {
+  if (!player.alive) return;
+
+  if (player.ammo <= 0) {
+    return;
+  }
+
+  player.ammo--;
+
+  player.selectedSlot = 1;
+
+  const angle = Number(player.angle) || 0;
+
+  const speed = 900;
+
+  bullets.push({
+    id: nextBulletId++,
+
+    ownerId: player.id,
+    partyCode: player.partyCode,
+
+    x: player.x + Math.cos(angle) * 28,
+    y: player.y + Math.sin(angle) * 28,
+
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+
+    damage: 20,
+
+    life: 1000
+  });
+}
+
+function reload(player) {
+  if (!player.alive) return;
+
+  player.ammo = player.maxAmmo;
+}
+
+function damagePlayer(player, damage, attackerId) {
+  if (!player.alive) return;
+
+  let remainingDamage = damage;
+
+  if (player.shield > 0) {
+    const shieldDamage = Math.min(player.shield, remainingDamage);
+
+    player.shield -= shieldDamage;
+    remainingDamage -= shieldDamage;
+  }
+
+  if (remainingDamage > 0) {
+    player.hp -= remainingDamage;
+  }
+
+  if (player.hp <= 0) {
+    killPlayer(player, attackerId);
+  }
+}
+
+function killPlayer(player, attackerId) {
+  if (!player.alive) return;
+
+  player.hp = 0;
+  player.alive = false;
+  player.moving = false;
+
+  if (attackerId && attackerId !== player.id) {
+    const attacker = players.get(attackerId);
 
     if (
-      p &&
-      !p.ready
+      attacker &&
+      attacker.partyCode === player.partyCode
     ) {
+      attacker.kills++;
+    }
+  }
 
-      return false;
+  broadcastParty(player.partyCode, {
+    type: "kill",
+    playerId: player.id,
+    attackerId: attackerId || null
+  });
+
+  checkWinner(player.partyCode);
+}
+
+function checkWinner(partyCode) {
+  if (!partyCode) return;
+
+  const party = parties.get(partyCode);
+
+  if (!party || !party.started) return;
+
+  const partyPlayers = [...party.players]
+    .map(id => players.get(id))
+    .filter(Boolean);
+
+  const alivePlayers = partyPlayers.filter(p => p.alive);
+
+  if (alivePlayers.length <= 1 && partyPlayers.length > 1) {
+    const winner = alivePlayers[0] || null;
+
+    broadcastParty(partyCode, {
+      type: "gameEnd",
+      winnerId: winner ? winner.id : null
+    });
+  }
+}
+
+/*
+ * Comprueba si un segmento entre (x1,y1) y (x2,y2)
+ * atraviesa un rectángulo.
+ *
+ * Esto evita que una bala rápida atraviese una pared
+ * entre dos actualizaciones del servidor.
+ */
+function segmentIntersectsRect(x1, y1, x2, y2, rect) {
+  const left = rect.x;
+  const right = rect.x + rect.width;
+  const top = rect.y;
+  const bottom = rect.y + rect.height;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+
+  if (
+    x1 >= left &&
+    x1 <= right &&
+    y1 >= top &&
+    y1 <= bottom
+  ) {
+    return true;
+  }
+
+  if (
+    x2 >= left &&
+    x2 <= right &&
+    y2 >= top &&
+    y2 <= bottom
+  ) {
+    return true;
+  }
+
+  let t0 = 0;
+  let t1 = 1;
+
+  const p = [-dx, dx, -dy, dy];
+  const q = [
+    x1 - left,
+    right - x1,
+    y1 - top,
+    bottom - y1
+  ];
+
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) {
+        return false;
+      }
+    } else {
+      const r = q[i] / p[i];
+
+      if (p[i] < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
     }
   }
 
   return true;
 }
 
-/* =========================================================
-   START PARTY
-========================================================= */
-
-function startParty(party) {
-
-  if (!party) return;
-
-  if (
-    party.started
-  ) {
-    return;
-  }
-
-  if (!canStart(party)) {
-
-    const host =
-      getPlayerById(
-        party.hostId
-      );
-
-    if (host) {
-
-      send(host.ws, {
-        type: "error",
-        message:
-          "Todos los jugadores deben estar listos."
-      });
-    }
-
-    return;
-  }
-
-  party.started =
-    true;
-
-  party.players.forEach(
-    id => {
-
-      const p =
-        getPlayerById(id);
-
-      if (!p) return;
-
-      p.alive = true;
-      p.hp = 100;
-      p.shield = 0;
-      p.ammo = p.maxAmmo;
-      p.kills = 0;
-      p.emote = null;
-      p.emoteUntil = 0;
-
-      const spawn =
-        randomSpawn();
-
-      p.x = spawn.x;
-      p.y = spawn.y;
-
-      p.moving = false;
-
-      send(p.ws, {
-        type: "countdown",
-        value: 3
-      });
-    }
-  );
-
-  setTimeout(() => {
-
-    party.players.forEach(
-      id => {
-
-        const p =
-          getPlayerById(id);
-
-        if (!p) return;
-
-        send(p.ws, {
-          type: "countdown",
-          value: 2
-        });
-      }
-
-    );
-
-  }, 1000);
-
-  setTimeout(() => {
-
-    party.players.forEach(
-      id => {
-
-        const p =
-          getPlayerById(id);
-
-        if (!p) return;
-
-        send(p.ws, {
-          type: "countdown",
-          value: 1
-        });
-      }
-
-    );
-
-  }, 2000);
-
-  setTimeout(() => {
-
-    party.players.forEach(
-      id => {
-
-        const p =
-          getPlayerById(id);
-
-        if (!p) return;
-
-        send(p.ws, {
-          type: "countdown",
-          value: 0
-        });
-
-        send(p.ws, {
-          type: "start",
-          player: {
-            id: p.id,
-            name: p.name,
-            x: p.x,
-            y: p.y,
-            hp: p.hp,
-            shield: p.shield,
-            ammo: p.ammo,
-            weapon: p.weapon,
-            angle: p.angle,
-            alive: p.alive
-          }
-        });
-      }
-
-    );
-
-  }, 3000);
-}
-
-/* =========================================================
-   UPDATE PLAYER
-========================================================= */
-
-function updatePlayer(
-  player,
-  data
-) {
-
-  if (!player) return;
-
-  if (
-    typeof data.x === "number" &&
-    typeof data.y === "number"
-  ) {
-
-    const targetX =
-      clamp(
-        data.x,
-        30,
-        WORLD_SIZE - 30
-      );
-
-    const targetY =
-      clamp(
-        data.y,
-        30,
-        WORLD_SIZE - 30
-      );
-
-    const dx =
-      targetX - player.x;
-
-    const dy =
-      targetY - player.y;
-
-    const delta =
-      Math.hypot(dx, dy);
-
-    if (
-      delta <=
-      MAX_POSITION_DELTA
-    ) {
-
-      player.x =
-        targetX;
-
-      player.y =
-        targetY;
-
-      player.moving =
-        delta > 0.1;
-    }
-  }
-
-  if (
-    typeof data.angle === "number" &&
-    Number.isFinite(data.angle)
-  ) {
-
-    player.angle =
-      data.angle;
-  }
-}
-
-/* =========================================================
-   SHOOT
-========================================================= */
-
-function shoot(player) {
-
-  if (
-    !player ||
-    !player.alive
-  ) {
-    return;
-  }
-
-  if (
-    player.ammo <= 0
-  ) {
-
-    send(player.ws, {
-      type: "error",
-      message: "Sin munición."
-    });
-
-    return;
-  }
-
-  player.ammo--;
-
-  const bulletSpeed =
-    900;
-
-  const bullet = {
-
-    id:
-      nextBulletId++,
-
-    ownerId:
-      player.id,
-
-    partyCode:
-      player.partyCode,
-
-    x:
-      player.x +
-      Math.cos(player.angle) *
-      28,
-
-    y:
-      player.y +
-      Math.sin(player.angle) *
-      28,
-
-    vx:
-      Math.cos(player.angle) *
-      bulletSpeed,
-
-    vy:
-      Math.sin(player.angle) *
-      bulletSpeed,
-
-    damage:
-      20,
-
-    life:
-      1000
-  };
-
-  bullets.push(
-    bullet
-  );
-}
-
-/* =========================================================
-   RELOAD
-========================================================= */
-
-function reload(player) {
-
-  if (!player) return;
-
-  player.ammo =
-    player.maxAmmo;
-}
-
-/* =========================================================
-   BULLETS
-========================================================= */
-
-const bullets = [];
-
-function createBulletHitEvent(
-  bullet,
-  x,
-  y
-) {
-
-  bulletHitEvents.push({
-    id: randomId("hit_"),
-    partyCode: bullet.partyCode,
-    x,
-    y
-  });
-}
-
 function updateBullets(deltaMs) {
+  const delta = deltaMs / 1000;
 
-  const delta =
-    deltaMs / 1000;
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const bullet = bullets[i];
 
-  for (
-    let i = bullets.length - 1;
-    i >= 0;
-    i--
-  ) {
+    const oldX = bullet.x;
+    const oldY = bullet.y;
 
-    const b =
-      bullets[i];
+    const newX = oldX + bullet.vx * delta;
+    const newY = oldY + bullet.vy * delta;
 
-    /*
-     * Guardamos la posición anterior.
-     *
-     * Esto permite comprobar todo el recorrido de la bala
-     * en vez de comprobar solamente su posición final.
-     */
-    const previousX =
-      b.x;
+    bullet.x = newX;
+    bullet.y = newY;
 
-    const previousY =
-      b.y;
+    bullet.life -= deltaMs;
 
-    const nextX =
-      b.x +
-      b.vx *
-      delta;
+    let removeBullet = false;
 
-    const nextY =
-      b.y +
-      b.vy *
-      delta;
+    // --------------------------------------------------
+    // COLISIÓN CON CONSTRUCCIONES
+    // --------------------------------------------------
 
-    b.life -=
-      deltaMs;
-
-    let remove = false;
-
-    /*
-     * -----------------------------------------------------
-     * COLISIÓN CON PAREDES
-     * -----------------------------------------------------
-     */
-
-    if (!remove) {
-
-      for (
-        const wall of walls
-      ) {
-
-        /*
-         * Una bala solo interactúa con paredes de su
-         * misma partida.
-         */
-        if (
-          wall.partyCode !==
-          b.partyCode
-        ) {
-          continue;
-        }
-
-        if (
-          segmentIntersectsRect(
-            previousX,
-            previousY,
-            nextX,
-            nextY,
-            wall
-          )
-        ) {
-
-          /*
-           * Calculamos un punto aproximado del impacto.
-           */
-          const hitX =
-            clamp(
-              nextX,
-              wall.x,
-              wall.x +
-              wall.width
-            );
-
-          const hitY =
-            clamp(
-              nextY,
-              wall.y,
-              wall.y +
-              wall.height
-            );
-
-          createBulletHitEvent(
-            b,
-            hitX,
-            hitY
-          );
-
-          remove = true;
-          break;
-        }
+    for (const wall of walls) {
+      if (wall.partyCode !== bullet.partyCode) {
+        continue;
       }
-    }
-
-    if (remove) {
-
-      bullets.splice(
-        i,
-        1
-      );
-
-      continue;
-    }
-
-    /*
-     * Actualizamos posición solamente si no chocó.
-     */
-    b.x = nextX;
-    b.y = nextY;
-
-    /*
-     * -----------------------------------------------------
-     * VIDA / LÍMITES
-     * -----------------------------------------------------
-     */
-
-    if (
-      b.life <= 0 ||
-      b.x < 0 ||
-      b.y < 0 ||
-      b.x > WORLD_SIZE ||
-      b.y > WORLD_SIZE
-    ) {
-
-      remove = true;
-    }
-
-    /*
-     * -----------------------------------------------------
-     * COLISIÓN CON JUGADORES
-     * -----------------------------------------------------
-     */
-
-    if (!remove) {
-
-      for (
-        const player of players.values()
-      ) {
-
-        if (
-          !player.alive ||
-          player.id === b.ownerId
-        ) {
-          continue;
-        }
-
-        /*
-         * Las balas solo afectan a jugadores de la
-         * misma partida.
-         */
-        if (
-          player.partyCode !==
-          b.partyCode
-        ) {
-          continue;
-        }
-
-        if (
-          distance(
-            b.x,
-            b.y,
-            player.x,
-            player.y
-          ) < 24
-        ) {
-
-          damagePlayer(
-            player,
-            b.damage,
-            b.ownerId
-          );
-
-          remove = true;
-          break;
-        }
-      }
-    }
-
-    if (remove) {
-
-      bullets.splice(
-        i,
-        1
-      );
-    }
-  }
-}
-
-/* =========================================================
-   DAMAGE
-========================================================= */
-
-function damagePlayer(
-  player,
-  damage,
-  attackerId
-) {
-
-  let remaining =
-    damage;
-
-  if (
-    player.shield > 0
-  ) {
-
-    const shieldDamage =
-      Math.min(
-        player.shield,
-        remaining
-      );
-
-    player.shield -=
-      shieldDamage;
-
-    remaining -=
-      shieldDamage;
-  }
-
-  if (
-    remaining > 0
-  ) {
-
-    player.hp -=
-      remaining;
-  }
-
-  if (
-    player.hp <= 0
-  ) {
-
-    player.hp = 0;
-
-    killPlayer(
-      player,
-      attackerId
-    );
-  }
-}
-
-/* =========================================================
-   KILL
-========================================================= */
-
-function killPlayer(
-  player,
-  killerId
-) {
-
-  if (!player.alive) {
-    return;
-  }
-
-  player.alive =
-    false;
-
-  player.moving =
-    false;
-
-  player.emote =
-    null;
-
-  player.emoteUntil =
-    0;
-
-  const killer =
-    getPlayerById(
-      killerId
-    );
-
-  if (killer) {
-
-    killer.kills++;
-
-    send(killer.ws, {
-      type: "kill",
-      killerId: killer.id,
-      victimId: player.id
-    });
-  }
-
-  checkWinner(
-    player.partyCode
-  );
-}
-
-/* =========================================================
-   WINNER
-========================================================= */
-
-function checkWinner(
-  partyCode
-) {
-
-  const party =
-    parties.get(
-      partyCode
-    );
-
-  if (!party) return;
-
-  const alive = [];
-
-  party.players.forEach(
-    id => {
-
-      const p =
-        getPlayerById(id);
 
       if (
-        p &&
-        p.alive
+        segmentIntersectsRect(
+          oldX,
+          oldY,
+          newX,
+          newY,
+          wall
+        )
       ) {
-
-        alive.push(p);
+        removeBullet = true;
+        break;
       }
     }
-  );
 
-  if (
-    alive.length <= 1
-  ) {
-
-    const winner =
-      alive[0];
-
-    party.players.forEach(
-      id => {
-
-        const p =
-          getPlayerById(id);
-
-        if (!p) return;
-
-        send(p.ws, {
-          type: "end",
-          winnerName:
-            winner
-              ? winner.name
-              : "Nadie"
-        });
-      }
-    );
-  }
-}
-
-/* =========================================================
-   BUILD
-========================================================= */
-
-const walls = [];
-
-function build(player) {
-
-  if (!player) return;
-
-  const distanceFromPlayer =
-    70;
-
-  const wall = {
-
-    id:
-      nextWallId++,
-
-    x:
-      player.x +
-      Math.cos(player.angle) *
-      distanceFromPlayer -
-      30,
-
-    y:
-      player.y +
-      Math.sin(player.angle) *
-      distanceFromPlayer -
-      30,
-
-    width: 60,
-    height: 60,
-
-    ownerId:
-      player.id,
-
-    partyCode:
-      player.partyCode
-  };
-
-  wall.x =
-    clamp(
-      wall.x,
-      0,
-      WORLD_SIZE -
-      wall.width
-    );
-
-  wall.y =
-    clamp(
-      wall.y,
-      0,
-      WORLD_SIZE -
-      wall.height
-    );
-
-  /*
-   * No permitir construir una pared exactamente encima
-   * de otra.
-   */
-  for (
-    const existing of walls
-  ) {
-
-    if (
-      existing.partyCode !==
-      player.partyCode
-    ) {
+    if (removeBullet) {
+      bullets.splice(i, 1);
       continue;
     }
 
-    const overlap =
-      !(
-        wall.x +
-        wall.width <=
-        existing.x ||
+    // --------------------------------------------------
+    // COLISIÓN CON JUGADORES
+    // --------------------------------------------------
 
-        wall.x >=
-        existing.x +
-        existing.width ||
+    for (const player of players.values()) {
+      if (!player.alive) continue;
 
-        wall.y +
-        wall.height <=
-        existing.y ||
+      if (player.id === bullet.ownerId) continue;
 
-        wall.y >=
-        existing.y +
-        existing.height
-      );
+      // Solo jugadores de la misma partida.
+      if (player.partyCode !== bullet.partyCode) continue;
 
-    if (overlap) {
+      const dx = player.x - bullet.x;
+      const dy = player.y - bullet.y;
 
-      return;
+      const distanceSquared = dx * dx + dy * dy;
+
+      // Hitbox aproximada del personaje.
+      if (distanceSquared <= 22 * 22) {
+        damagePlayer(
+          player,
+          bullet.damage,
+          bullet.ownerId
+        );
+
+        removeBullet = true;
+        break;
+      }
     }
-  }
 
-  walls.push(
-    wall
-  );
-
-  /*
-   * Limitar la cantidad de construcciones
-   * por jugador.
-   */
-
-  const mine =
-    walls.filter(
-      w =>
-        w.ownerId ===
-        player.id
-    );
-
-  if (
-    mine.length > 20
-  ) {
-
-    const first =
-      mine[0];
-
-    const index =
-      walls.indexOf(first);
+    if (removeBullet || bullet.life <= 0) {
+      bullets.splice(i, 1);
+      continue;
+    }
 
     if (
-      index !== -1
+      bullet.x < 0 ||
+      bullet.x > WORLD_SIZE ||
+      bullet.y < 0 ||
+      bullet.y > WORLD_SIZE
     ) {
-
-      walls.splice(
-        index,
-        1
-      );
+      bullets.splice(i, 1);
     }
   }
 }
 
-/* =========================================================
-   PICKAXE
-========================================================= */
+function build(player) {
+  if (!player.alive) return;
+
+  player.selectedSlot = 3;
+
+  const angle = Number(player.angle) || 0;
+
+  const width = 60;
+  const height = 60;
+
+  const distance = 70;
+
+  let x =
+    player.x +
+    Math.cos(angle) * distance -
+    width / 2;
+
+  let y =
+    player.y +
+    Math.sin(angle) * distance -
+    height / 2;
+
+  x = Math.max(0, Math.min(WORLD_SIZE - width, x));
+  y = Math.max(0, Math.min(WORLD_SIZE - height, y));
+
+  const wall = {
+    id: nextWallId++,
+
+    x,
+    y,
+
+    width,
+    height,
+
+    ownerId: player.id,
+
+    // Muy importante:
+    // esta construcción solo existe dentro de esta partida.
+    partyCode: player.partyCode
+  };
+
+  walls.push(wall);
+
+  // Máximo 20 construcciones por jugador.
+  const playerWalls = walls.filter(
+    w => w.ownerId === player.id
+  );
+
+  if (playerWalls.length > 20) {
+    const oldest = playerWalls[0];
+
+    const index = walls.indexOf(oldest);
+
+    if (index !== -1) {
+      walls.splice(index, 1);
+    }
+  }
+}
 
 function pickaxe(player) {
+  if (!player.alive) return;
 
-  if (!player) return;
+  player.selectedSlot = 4;
+
+  // Animación visual del pico.
+  player.pickaxeUntil = Date.now() + 350;
 
   const range = 75;
 
-  for (
-    let i = walls.length - 1;
-    i >= 0;
-    i--
-  ) {
+  for (let i = walls.length - 1; i >= 0; i--) {
+    const wall = walls[i];
 
-    const wall =
-      walls[i];
-
-    if (
-      wall.partyCode !==
-      player.partyCode
-    ) {
+    // No puedes romper construcciones de otra partida.
+    if (wall.partyCode !== player.partyCode) {
       continue;
     }
 
-    const centerX =
-      wall.x +
-      wall.width / 2;
+    const centerX = wall.x + wall.width / 2;
+    const centerY = wall.y + wall.height / 2;
 
-    const centerY =
-      wall.y +
-      wall.height / 2;
+    const dx = centerX - player.x;
+    const dy = centerY - player.y;
 
-    if (
-      distance(
-        player.x,
-        player.y,
-        centerX,
-        centerY
-      ) <= range
-    ) {
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-      /*
-       * Evento opcional para que el cliente pueda
-       * reproducir una animación de rotura.
-       */
-      const party =
-        parties.get(
-          player.partyCode
-        );
-
-      if (party) {
-
-        party.players.forEach(
-          id => {
-
-            const p =
-              getPlayerById(id);
-
-            if (!p) return;
-
-            send(p.ws, {
-              type: "wallDestroyed",
-              wallId: wall.id,
-              x: centerX,
-              y: centerY
-            });
-          }
-        );
-      }
-
-      walls.splice(
-        i,
-        1
-      );
-
-      return;
+    if (distance <= range) {
+      walls.splice(i, 1);
+      break;
     }
   }
 }
 
-/* =========================================================
-   LOOT
-========================================================= */
-
-const loot = [];
-
-function pickup(player) {
-
-  if (!player) return;
-
-  for (
-    let i = loot.length - 1;
-    i >= 0;
-    i--
-  ) {
-
-    const item =
-      loot[i];
-
-    if (
-      distance(
-        player.x,
-        player.y,
-        item.x,
-        item.y
-      ) <= 70
-    ) {
-
-      if (
-        item.type ===
-        "ammo"
-      ) {
-
-        player.ammo =
-          Math.min(
-            player.maxAmmo,
-            player.ammo +
-            (item.amount || 10)
-          );
-      }
-
-      if (
-        item.type ===
-        "shield"
-      ) {
-
-        player.shield =
-          Math.min(
-            100,
-            player.shield +
-            (item.amount || 25)
-          );
-      }
-
-      loot.splice(
-        i,
-        1
-      );
-
-      return;
-    }
-  }
-}
-
-/* =========================================================
-   CHAT
-========================================================= */
-
-function chat(
-  player,
-  message
-) {
-
-  if (!player) return;
-
-  message =
-    String(message || "")
-      .trim()
-      .slice(0, 100);
-
-  if (!message) return;
-
-  const party =
-    parties.get(
-      player.partyCode
-    );
-
-  if (!party) return;
-
-  party.players.forEach(
-    id => {
-
-      const p =
-        getPlayerById(id);
-
-      if (!p) return;
-
-      send(p.ws, {
-        type: "chat",
-        name: player.name,
-        message
-      });
-    }
-  );
-}
-
-/* =========================================================
-   EMOTE
-========================================================= */
-
-function emote(
-  player,
-  value
-) {
-
-  if (!player) return;
-
+function pickup(player, lootId) {
   if (!player.alive) return;
 
-  /*
-   * Permitimos solamente valores cortos.
-   *
-   * El cliente puede seguir usando sus nombres actuales
-   * de emote.
-   */
-  const emoteValue =
-    String(value || "")
-      .trim()
-      .slice(0, 20);
-
-  if (!emoteValue) return;
-
-  /*
-   * Guardamos el emote en el jugador.
-   * De esta forma también aparece en el estado.
-   */
-  player.emote =
-    emoteValue;
-
-  /*
-   * Dura 2,5 segundos.
-   */
-  player.emoteUntil =
-    Date.now() + 2500;
-
-  const party =
-    parties.get(
-      player.partyCode
-    );
-
-  if (!party) return;
-
-  /*
-   * IMPORTANTE:
-   *
-   * Antes esto se enviaba como:
-   *
-   * type:"chat"
-   *
-   * Ahora es un evento real de emote.
-   */
-  party.players.forEach(
-    id => {
-
-      const p =
-        getPlayerById(id);
-
-      if (!p) return;
-
-      send(p.ws, {
-        type: "emote",
-        playerId:
-          player.id,
-        name:
-          player.name,
-        emote:
-          emoteValue
-      });
-    }
-  );
-}
-
-/* =========================================================
-   STATE
-========================================================= */
-
-function createState(
-  partyCode
-) {
-
-  const party =
-    parties.get(
-      partyCode
-    );
-
-  if (!party) {
-
-    return {
-      players: [],
-      bullets: [],
-      loot: [],
-      walls: []
-    };
-  }
-
-  const statePlayers = [];
-
-  party.players.forEach(
-    id => {
-
-      const p =
-        getPlayerById(id);
-
-      if (!p) return;
-
-      /*
-       * Limpiamos emotes expirados.
-       */
-      if (
-        p.emoteUntil > 0 &&
-        Date.now() >
-        p.emoteUntil
-      ) {
-
-        p.emote = null;
-        p.emoteUntil = 0;
-      }
-
-      statePlayers.push({
-
-        id: p.id,
-
-        name: p.name,
-
-        x: p.x,
-
-        y: p.y,
-
-        angle: p.angle,
-
-        hp: p.hp,
-
-        shield: p.shield,
-
-        weapon: p.weapon,
-
-        ammo: p.ammo,
-
-        kills: p.kills,
-
-        alive: p.alive,
-
-        moving: p.moving,
-
-        team: p.team,
-
-        emote:
-          p.emote
-      });
-    }
+  const index = loot.findIndex(
+    item =>
+      item.id === lootId &&
+      item.partyCode === player.partyCode
   );
 
-  return {
+  if (index === -1) return;
 
-    players:
-      statePlayers,
+  const item = loot[index];
 
-    bullets:
-      bullets
-        .filter(
-          b =>
-            b.partyCode ===
-            partyCode
-        )
-        .map(
-          b => ({
-            id: b.id,
-            ownerId: b.ownerId,
-            x: b.x,
-            y: b.y
-          })
-        ),
+  const dx = item.x - player.x;
+  const dy = item.y - player.y;
 
-    loot:
-      loot.map(
-        item => ({
-          id: item.id,
-          type: item.type,
-          x: item.x,
-          y: item.y,
-          amount: item.amount
-        })
-      ),
-
-    walls:
-      walls
-        .filter(
-          w =>
-            w.partyCode ===
-            partyCode
-        )
-        .map(
-          w => ({
-            id: w.id,
-            x: w.x,
-            y: w.y,
-            width: w.width,
-            height: w.height,
-            ownerId: w.ownerId
-          })
-        )
-  };
-}
-
-/* =========================================================
-   BROADCAST STATES
-========================================================= */
-
-function broadcastStates() {
-
-  const partyStates =
-    new Map();
-
-  for (
-    const player of players.values()
-  ) {
-
-    if (!player.partyCode) {
-      continue;
-    }
-
-    if (
-      !partyStates.has(
-        player.partyCode
-      )
-    ) {
-
-      partyStates.set(
-        player.partyCode,
-        createState(
-          player.partyCode
-        )
-      );
-    }
-
-    send(
-      player.ws,
-      {
-        type: "state",
-        ...partyStates.get(
-          player.partyCode
-        )
-      }
-    );
-
-    player.moving =
-      false;
-  }
-}
-
-/* =========================================================
-   BROADCAST BULLET HIT EVENTS
-========================================================= */
-
-function broadcastBulletHitEvents() {
-
-  if (
-    bulletHitEvents.length === 0
-  ) {
+  if (dx * dx + dy * dy > 80 * 80) {
     return;
   }
 
-  while (
-    bulletHitEvents.length > 0
-  ) {
+  if (item.type === "ammo") {
+    player.ammo = Math.min(
+      player.maxAmmo,
+      player.ammo + (item.amount || 10)
+    );
+  }
 
-    const event =
-      bulletHitEvents.shift();
+  if (item.type === "shield") {
+    player.shield = Math.min(
+      100,
+      player.shield + (item.amount || 25)
+    );
+  }
 
-    const party =
-      parties.get(
-        event.partyCode
-      );
+  if (item.type === "health") {
+    player.hp = Math.min(
+      100,
+      player.hp + (item.amount || 25)
+    );
+  }
 
-    if (!party) {
-      continue;
+  loot.splice(index, 1);
+}
+
+function emote(player, value) {
+  if (!player.alive) return;
+
+  value = String(value || "");
+
+  if (!EMOTES.has(value)) {
+    return;
+  }
+
+  player.emote = value;
+
+  // El emote se mantiene visible durante 2 segundos.
+  player.emoteUntil = Date.now() + 2000;
+
+  broadcastParty(player.partyCode, {
+    type: "emote",
+    playerId: player.id,
+    emote: value
+  });
+}
+
+function createState(partyCode) {
+  const now = Date.now();
+
+  const statePlayers = [];
+
+  for (const player of players.values()) {
+    if (player.partyCode !== partyCode) continue;
+
+    if (
+      player.emoteUntil &&
+      player.emoteUntil < now
+    ) {
+      player.emote = null;
+      player.emoteUntil = 0;
     }
 
-    party.players.forEach(
-      id => {
+    statePlayers.push({
+      id: player.id,
+      name: player.name,
 
-        const player =
-          getPlayerById(id);
+      x: player.x,
+      y: player.y,
 
-        if (!player) return;
+      angle: player.angle,
 
-        send(player.ws, {
-          type:
-            "bulletHitWall",
+      hp: player.hp,
+      shield: player.shield,
 
-          x:
-            event.x,
+      weapon: player.weapon,
 
-          y:
-            event.y
-        });
-      }
-    );
+      ammo: player.ammo,
+
+      kills: player.kills,
+
+      alive: player.alive,
+      moving: player.moving,
+
+      team: player.team,
+
+      // Para que el cliente sepa qué tiene equipado.
+      selectedSlot: player.selectedSlot,
+
+      // Emote actual.
+      emote: player.emote,
+      emoteUntil: player.emoteUntil,
+
+      // Animación del pico.
+      pickaxeUntil: player.pickaxeUntil
+    });
+  }
+
+  return {
+    type: "state",
+
+    players: statePlayers,
+
+    // Solo se envían las balas de esta partida.
+    bullets: bullets
+      .filter(b => b.partyCode === partyCode)
+      .map(b => ({
+        id: b.id,
+        ownerId: b.ownerId,
+        x: b.x,
+        y: b.y
+      })),
+
+    // Solo loot de esta partida.
+    loot: loot
+      .filter(item => item.partyCode === partyCode),
+
+    // Solo construcciones de esta partida.
+    walls: walls
+      .filter(w => w.partyCode === partyCode)
+      .map(w => ({
+        id: w.id,
+        x: w.x,
+        y: w.y,
+        width: w.width,
+        height: w.height,
+        ownerId: w.ownerId
+      }))
+  };
+}
+
+function broadcastStateToParty(partyCode) {
+  const state = createState(partyCode);
+
+  broadcastParty(partyCode, state);
+}
+
+function broadcastStates() {
+  for (const party of parties.values()) {
+    if (!party.started) continue;
+
+    broadcastStateToParty(party.code);
   }
 }
 
-/* =========================================================
-   WEBSOCKET MESSAGE
-========================================================= */
+wss.on("connection", ws => {
+  let player = null;
 
-wss.on(
-  "connection",
-  ws => {
+  ws.on("message", rawMessage => {
+    let data;
 
-    const player =
-      createPlayer(
+    try {
+      data = JSON.parse(rawMessage.toString());
+    } catch {
+      return;
+    }
+
+    if (!data || typeof data.type !== "string") {
+      return;
+    }
+
+    // --------------------------------------------------
+    // CREAR JUGADOR
+    // --------------------------------------------------
+
+    if (data.type === "createPlayer") {
+      if (player) return;
+
+      player = createPlayer(
         ws,
-        "Player"
+        data.name
       );
 
-    send(ws, {
-      type: "joined",
-      player: {
-        id: player.id,
+      send(ws, {
+        type: "player",
+        player: {
+          id: player.id,
+          name: player.name
+        }
+      });
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // CREATE PARTY
+    // --------------------------------------------------
+
+    if (data.type === "createParty") {
+      if (!player) return;
+
+      createParty(
+        player,
+        data.teamMode
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // JOIN PARTY
+    // --------------------------------------------------
+
+    if (data.type === "joinParty") {
+      if (!player) return;
+
+      joinParty(
+        player,
+        data.code
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // READY
+    // --------------------------------------------------
+
+    if (data.type === "ready") {
+      if (!player) return;
+
+      setReady(
+        player,
+        data.ready
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // START
+    // --------------------------------------------------
+
+    if (data.type === "start") {
+      if (!player) return;
+
+      startParty(player);
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // LEAVE PARTY
+    // --------------------------------------------------
+
+    if (data.type === "leaveParty") {
+      if (!player) return;
+
+      const oldPartyCode = player.partyCode;
+
+      removePlayerFromParty(player);
+
+      send(ws, {
+        type: "leftParty"
+      });
+
+      if (oldPartyCode) {
+        const party = parties.get(oldPartyCode);
+
+        if (party) {
+          broadcastParty(oldPartyCode, {
+            type: "party",
+            party: getPartyState(party)
+          });
+        }
+      }
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // UPDATE
+    // --------------------------------------------------
+
+    if (data.type === "update") {
+      if (!player) return;
+
+      updatePlayer(
+        player,
+        data
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // SHOOT
+    // --------------------------------------------------
+
+    if (data.type === "shoot") {
+      if (!player) return;
+
+      shoot(player);
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // RELOAD
+    // --------------------------------------------------
+
+    if (data.type === "reload") {
+      if (!player) return;
+
+      reload(player);
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // SELECT SLOT
+    // --------------------------------------------------
+
+    if (data.type === "selectSlot") {
+      if (!player) return;
+
+      const slot = Number(data.slot);
+
+      if (
+        Number.isInteger(slot) &&
+        slot >= 1 &&
+        slot <= 4
+      ) {
+        player.selectedSlot = slot;
+      }
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // BUILD
+    // --------------------------------------------------
+
+    if (data.type === "build") {
+      if (!player) return;
+
+      if (Number.isFinite(Number(data.angle))) {
+        player.angle = Number(data.angle);
+      }
+
+      build(player);
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // PICKAXE
+    // --------------------------------------------------
+
+    if (data.type === "pickaxe") {
+      if (!player) return;
+
+      if (Number.isFinite(Number(data.angle))) {
+        player.angle = Number(data.angle);
+      }
+
+      pickaxe(player);
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // PICKUP
+    // --------------------------------------------------
+
+    if (data.type === "pickup") {
+      if (!player) return;
+
+      pickup(
+        player,
+        data.id
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // CHAT
+    // --------------------------------------------------
+
+    if (data.type === "chat") {
+      if (!player) return;
+
+      const message = String(
+        data.message || ""
+      )
+        .trim()
+        .substring(0, 200);
+
+      if (!message) return;
+
+      broadcastParty(player.partyCode, {
+        type: "chat",
+        playerId: player.id,
         name: player.name,
-        x: player.x,
-        y: player.y,
-        hp: player.hp,
-        shield: player.shield,
-        ammo: player.ammo,
-        weapon: player.weapon,
-        angle: player.angle,
-        alive: player.alive
+        message
+      });
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // EMOTE
+    // --------------------------------------------------
+
+    if (data.type === "emote") {
+      if (!player) return;
+
+      emote(
+        player,
+        data.emote
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // PING
+    // --------------------------------------------------
+
+    if (data.type === "ping") {
+      send(ws, {
+        type: "pong"
+      });
+
+      return;
+    }
+  });
+
+  ws.on("close", () => {
+    if (!player) return;
+
+    const partyCode = player.partyCode;
+
+    // Eliminar balas del jugador.
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      if (bullets[i].ownerId === player.id) {
+        bullets.splice(i, 1);
       }
-    });
-
-    ws.on(
-      "message",
-      raw => {
-
-        let data;
-
-        try {
-
-          data =
-            JSON.parse(
-              raw.toString()
-            );
-
-        } catch (e) {
-
-          return;
-        }
-
-        switch (data.type) {
-
-          /* -------------------------
-             CREATE PARTY
-          ------------------------- */
-
-          case "createParty": {
-
-            if (
-              player.partyCode
-            ) {
-
-              removeFromParty(
-                player
-              );
-            }
-
-            player.name =
-              String(
-                data.name ||
-                "Player"
-              ).slice(0, 16);
-
-            createParty(
-              player,
-              data.teamMode
-            );
-
-            break;
-          }
-
-          /* -------------------------
-             JOIN PARTY
-          ------------------------- */
-
-          case "joinParty": {
-
-            player.name =
-              String(
-                data.name ||
-                "Player"
-              ).slice(0, 16);
-
-            joinParty(
-              player,
-              data.code
-            );
-
-            break;
-          }
-
-          /* -------------------------
-             READY
-          ------------------------- */
-
-          case "ready":
-
-            toggleReady(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             START
-          ------------------------- */
-
-          case "start": {
-
-            const party =
-              parties.get(
-                player.partyCode
-              );
-
-            if (
-              party &&
-              party.hostId ===
-              player.id
-            ) {
-
-              startParty(
-                party
-              );
-            }
-
-            break;
-          }
-
-          /* -------------------------
-             LEAVE
-          ------------------------- */
-
-          case "leaveParty":
-
-            removeFromParty(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             UPDATE
-          ------------------------- */
-
-          case "update":
-
-            updatePlayer(
-              player,
-              data
-            );
-
-            break;
-
-          /* -------------------------
-             SHOOT
-          ------------------------- */
-
-          case "shoot":
-
-            if (
-              typeof data.angle ===
-              "number"
-            ) {
-
-              player.angle =
-                data.angle;
-            }
-
-            shoot(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             RELOAD
-          ------------------------- */
-
-          case "reload":
-
-            reload(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             BUILD
-          ------------------------- */
-
-          case "build":
-
-            build(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             PICKAXE
-          ------------------------- */
-
-          case "pickaxe":
-
-            if (
-              typeof data.angle ===
-              "number"
-            ) {
-
-              player.angle =
-                data.angle;
-            }
-
-            pickaxe(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             PICKUP
-          ------------------------- */
-
-          case "pickup":
-
-            pickup(
-              player
-            );
-
-            break;
-
-          /* -------------------------
-             CHAT
-          ------------------------- */
-
-          case "chat":
-
-            chat(
-              player,
-              data.message
-            );
-
-            break;
-
-          /* -------------------------
-             EMOTE
-          ------------------------- */
-
-          case "emote":
-
-            emote(
-              player,
-              data.emote
-            );
-
-            break;
-
-          /* -------------------------
-             PING
-          ------------------------- */
-
-          case "ping":
-
-            send(ws, {
-              type: "pong",
-              clientTime:
-                data.clientTime
-            });
-
-            break;
-        }
+    }
+
+    // Eliminar construcciones del jugador.
+    for (let i = walls.length - 1; i >= 0; i--) {
+      if (walls[i].ownerId === player.id) {
+        walls.splice(i, 1);
       }
-    );
+    }
 
-    /* =====================================================
-       CLOSE
-    ===================================================== */
+    removePlayerFromParty(player);
 
-    ws.on(
-      "close",
-      () => {
+    players.delete(player.id);
 
-        removeFromParty(
-          player
-        );
+    if (partyCode) {
+      const party = parties.get(partyCode);
 
-        players.delete(
-          ws
-        );
+      if (party) {
+        broadcastParty(partyCode, {
+          type: "party",
+          party: getPartyState(party)
+        });
       }
-    );
+    }
+  });
+});
 
-    ws.on(
-      "error",
-      () => {
+// --------------------------------------------------
+// GAME LOOP
+// --------------------------------------------------
 
-        removeFromParty(
-          player
-        );
+let lastUpdate = Date.now();
 
-        players.delete(
-          ws
-        );
-      }
-    );
-  }
-);
+setInterval(() => {
+  const now = Date.now();
 
-/* =========================================================
-   GAME LOOP
-========================================================= */
+  const deltaMs = Math.min(
+    100,
+    now - lastUpdate
+  );
 
-let lastGameUpdate =
-  Date.now();
+  lastUpdate = now;
 
-setInterval(
-  () => {
+  updateBullets(deltaMs);
 
-    const now =
-      Date.now();
+  broadcastStates();
+}, STATE_INTERVAL);
 
-    const delta =
-      now -
-      lastGameUpdate;
-
-    lastGameUpdate =
-      now;
-
-    updateBullets(
-      delta
-    );
-
-    broadcastBulletHitEvents();
-
-    broadcastStates();
-
-  },
-  STATE_INTERVAL
-);
-
-/* =========================================================
-   START SERVER
-========================================================= */
-
-server.listen(
-  PORT,
-  () => {
-
-    console.log(
-      "================================="
-    );
-
-    console.log(
-      " PIXEL ROYALE SERVER"
-    );
-
-    console.log(
-      " Server running on port " +
-      PORT
-    );
-
-    console.log(
-      " http://localhost:" +
-      PORT
-    );
-
-    console.log(
-      "================================="
-    );
-  }
-);
+server.listen(PORT, () => {
+  console.log(`Pixel Royale server running on port ${PORT}`);
+});
